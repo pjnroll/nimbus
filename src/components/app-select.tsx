@@ -34,9 +34,11 @@ export function AppSelect({
       }}
     >
       <SelectTrigger id={id} className={cn("w-full", className)}>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder}>
+          {options.find((option) => option.value === value)?.label ?? placeholder}
+        </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent alignItemWithTrigger={false} align="start">
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}

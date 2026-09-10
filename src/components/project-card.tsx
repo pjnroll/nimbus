@@ -49,7 +49,11 @@ export function ProjectCard({
         <p className="mt-2 text-xs text-muted-foreground">{project.people}</p>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button render={<Link href={`/progetti/${project.id}`} />} size="sm">
+        <Button
+          nativeButton={false}
+          render={<Link href={`/progetti/${project.id}`} />}
+          size="sm"
+        >
           <FolderOpenIcon data-icon="inline-start" />
           Apri scheda
         </Button>
@@ -57,6 +61,7 @@ export function ProjectCard({
           <Button
             variant="outline"
             size="sm"
+            nativeButton={false}
             render={
               <Link href={project.driveUrl} target="_blank" rel="noreferrer" />
             }

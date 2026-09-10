@@ -41,7 +41,7 @@ export default function ProjectDetailPage({
         <p className="text-sm text-muted-foreground">
           Potrebbe essere stato eliminato su questo browser.
         </p>
-        <Button render={<Link href="/progetti" />} variant="outline">
+        <Button nativeButton={false} render={<Link href="/progetti" />} variant="outline">
           Torna ai progetti
         </Button>
       </div>
@@ -85,6 +85,7 @@ export default function ProjectDetailPage({
           {project.driveUrl ? (
             <Button
               variant="outline"
+              nativeButton={false}
               render={
                 <Link href={project.driveUrl} target="_blank" rel="noreferrer" />
               }

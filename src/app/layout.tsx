@@ -26,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="it"
       className={`${outfit.variable} ${serif.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
         <Providers>
