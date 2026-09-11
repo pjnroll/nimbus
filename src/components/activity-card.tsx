@@ -10,9 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/status-badges"
+import { CategoryBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/status-badges"
 import { formatDateIT, isOverdue, todayISO } from "@/lib/dates"
 import { SOURCE_LABELS } from "@/lib/labels"
+import { categoryName } from "@/lib/categories"
 import { personName, personNames } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
 import type { Activity, Project } from "@/lib/types"
@@ -35,6 +36,7 @@ export function ActivityCard({
   const requesterName = personName(store.people, activity.requesterId)
   const waitingOnName = personName(store.people, activity.waitingOnPersonId)
   const assigneeLabel = personNames(store.people, activity.assigneeIds)
+  const categoryLabel = categoryName(project, activity.categoryId)
   const overdue =
     activity.status !== "fatto" &&
     activity.status !== "inbox" &&
@@ -57,6 +59,7 @@ export function ActivityCard({
             <StatusBadge status={activity.status} />
             <TypeBadge type={activity.type} />
             <PriorityBadge priority={activity.priority} />
+            {categoryLabel ? <CategoryBadge name={categoryLabel} /> : null}
           </div>
           <h3 className="font-heading text-base leading-snug font-medium text-foreground">
             {activity.title}

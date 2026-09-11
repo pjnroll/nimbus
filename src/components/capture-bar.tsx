@@ -35,6 +35,7 @@ export function CaptureBar() {
       waitingOnPersonId: null,
       waitingReason: "",
       driveUrl: "",
+      categoryId: null,
     })
     setTitle("")
     setRequesterId(null)

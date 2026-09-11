@@ -10,6 +10,10 @@ import {
   type ReactNode,
 } from "react"
 import { toast } from "sonner"
+import {
+  resolveActivityCategoryId,
+  upsertCategoryOnProject,
+} from "@/lib/categories"
 import { nowISO } from "@/lib/dates"
 import {
   activityPersonIds,
@@ -22,6 +26,7 @@ import { SEED_STORE } from "@/lib/seed"
 import {
   STORE_KEY,
   type Activity,
+  type Category,
   type NimbusStore,
   type Person,
   type Project,
@@ -39,12 +44,13 @@ type StoreContextValue = {
   updateActivity: (id: string, patch: Partial<Activity>) => void
   deleteActivity: (id: string) => void
   upsertPerson: (name: string) => Person | null
+  upsertCategory: (projectId: string, name: string) => Category | null
   replaceStore: (next: NimbusStore) => void
   resetToSeed: () => void
 }
 
 const EMPTY_STORE: NimbusStore = {
-  version: 2,
+  version: 3,
   people: [],
   projects: [],
   activities: [],
@@ -265,6 +271,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const updateProject = useCallback((id: string, patch: Partial<Project>) => {
     const current = getSnapshot()
+    const categories = patch.categories
     writeStore({
       ...current,
       projects: current.projects.map((project) =>
@@ -272,6 +279,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? { ...project, ...patch, id, updatedAt: nowISO() }
           : project,
       ),
+      activities:
+        categories === undefined
+          ? current.activities
+          : current.activities.map((activity) => {
+              if (activity.projectId !== id || !activity.categoryId) return activity
+              const stillThere = categories.some(
+                (category) => category.id === activity.categoryId,
+              )
+              if (stillThere) return activity
+              return { ...activity, categoryId: null, updatedAt: nowISO() }
+            }),
     })
   }, [])
 
@@ -282,7 +300,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       projects: current.projects.filter((project) => project.id !== id),
       activities: current.activities.map((activity) =>
         activity.projectId === id
-          ? { ...activity, projectId: null, updatedAt: nowISO() }
+          ? { ...activity, projectId: null, categoryId: null, updatedAt: nowISO() }
           : activity,
       ),
     })
@@ -291,16 +309,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addActivity = useCallback(
     (input: Omit<Activity, "id" | "createdAt" | "updatedAt">) => {
       const stamp = nowISO()
+      const current = getSnapshot()
       const activity: Activity = {
         ...input,
         id: newId(),
         createdAt: stamp,
         updatedAt: stamp,
+        categoryId: resolveActivityCategoryId(
+          current.projects,
+          input.projectId,
+          input.categoryId,
+        ),
       }
-      const current = withActivityPeople(getSnapshot(), activity)
+      const linked = withActivityPeople(current, activity)
       writeStore({
-        ...current,
-        activities: [activity, ...current.activities],
+        ...linked,
+        activities: [activity, ...linked.activities],
       })
       return activity
     },
@@ -316,6 +340,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...patch,
       id,
       updatedAt: nowISO(),
+      categoryId: resolveActivityCategoryId(
+        current.projects,
+        patch.projectId === undefined ? previous.projectId : patch.projectId,
+        patch.categoryId === undefined ? previous.categoryId : patch.categoryId,
+      ),
     }
     const linked = withActivityPeople(current, nextActivity)
     writeStore({
@@ -342,6 +371,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return result.person
   }, [])
 
+  const upsertCategory = useCallback((projectId: string, name: string) => {
+    const result = upsertCategoryOnProject(getSnapshot(), projectId, name)
+    if (result.category && result.store !== getSnapshot()) {
+      writeStore(result.store)
+    }
+    return result.category
+  }, [])
+
   const replaceStore = useCallback((next: NimbusStore) => {
     writeStore(next)
   }, [])
@@ -361,6 +398,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateActivity,
       deleteActivity,
       upsertPerson,
+      upsertCategory,
       replaceStore,
       resetToSeed,
     }),
@@ -374,6 +412,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateActivity,
       deleteActivity,
       upsertPerson,
+      upsertCategory,
       replaceStore,
       resetToSeed,
     ],

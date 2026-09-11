@@ -15,10 +15,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { CategoryField } from "@/components/category-field"
 import { PersonField } from "@/components/person-field"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
+import { cleanCategoryName, findCategoryByName } from "@/lib/categories"
+import { newId } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
-import type { Project, ProjectStatus } from "@/lib/types"
+import type { Category, Project, ProjectStatus } from "@/lib/types"
 
 type FormState = {
   name: string
@@ -26,6 +29,7 @@ type FormState = {
   status: ProjectStatus
   driveUrl: string
   personIds: string[]
+  categories: Category[]
   notes: string
 }
 
@@ -36,6 +40,7 @@ function emptyForm(): FormState {
     status: "attivo",
     driveUrl: "",
     personIds: [],
+    categories: [],
     notes: "",
   }
 }
@@ -47,6 +52,7 @@ function fromProject(project: Project): FormState {
     status: project.status,
     driveUrl: project.driveUrl,
     personIds: project.personIds,
+    categories: project.categories ?? [],
     notes: project.notes,
   }
 }
@@ -106,6 +112,7 @@ function ProjectDialogForm({
       status: form.status,
       driveUrl: form.driveUrl.trim(),
       personIds: form.personIds,
+      categories: form.categories,
       notes: form.notes.trim(),
     }
     if (project) {
@@ -190,6 +197,40 @@ function ProjectDialogForm({
             onChange={(personIds) => setForm({ ...form, personIds })}
             onCreate={upsertPerson}
             placeholder="Nome, poi Invio per aggiungere"
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="prj-categories">Categorie</Label>
+          <CategoryField
+            id="prj-categories"
+            categories={form.categories}
+            value={form.categories.map((category) => category.id)}
+            onChange={(ids) =>
+              setForm((current) => ({
+                ...current,
+                categories: ids
+                  .map((id) =>
+                    current.categories.find((category) => category.id === id),
+                  )
+                  .filter((category): category is Category => Boolean(category)),
+              }))
+            }
+            onCreate={(name) => {
+              const cleaned = cleanCategoryName(name)
+              if (!cleaned) return null
+              const existing = findCategoryByName(form.categories, cleaned)
+              if (existing) return existing
+              const created: Category = { id: newId(), name: cleaned }
+              setForm((current) => {
+                if (findCategoryByName(current.categories, cleaned)) return current
+                return {
+                  ...current,
+                  categories: [...current.categories, created],
+                }
+              })
+              return created
+            }}
+            placeholder="Applicativo, Infrastruttura, Documentazione"
           />
         </div>
         <div className="grid gap-1.5">

@@ -31,6 +31,17 @@ export function TypeBadge({ type }: { type: ActivityType }) {
   )
 }
 
+export function CategoryBadge({ name }: { name: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className="border-violet-200 bg-violet-50 font-medium text-violet-800"
+    >
+      {name}
+    </Badge>
+  )
+}
+
 export function PriorityBadge({ priority }: { priority: Priority }) {
   const styles: Record<Priority, string> = {
     alta: "border-red-200 bg-red-50 text-red-800",

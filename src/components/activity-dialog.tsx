@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
+import { CategoryField } from "@/components/category-field"
 import { PersonField } from "@/components/person-field"
 import { Button } from "@/components/ui/button"
 import {
@@ -46,6 +47,7 @@ type FormState = {
   waitingOnPersonId: string | null
   waitingReason: string
   driveUrl: string
+  categoryId: string | null
 }
 
 const emptyForm = (defaults?: Partial<FormState>): FormState => ({
@@ -62,6 +64,7 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   waitingOnPersonId: null,
   waitingReason: "",
   driveUrl: "",
+  categoryId: null,
   ...defaults,
 })
 
@@ -80,6 +83,7 @@ function fromActivity(activity: Activity): FormState {
     waitingOnPersonId: activity.waitingOnPersonId,
     waitingReason: activity.waitingReason,
     driveUrl: activity.driveUrl,
+    categoryId: activity.categoryId,
   }
 }
 
@@ -121,7 +125,7 @@ function ActivityDialogForm({
   heading?: string
   onOpenChange: (open: boolean) => void
 }) {
-  const { store, addActivity, updateActivity, deleteActivity, upsertPerson } =
+  const { store, addActivity, updateActivity, deleteActivity, upsertPerson, upsertCategory } =
     useNimbus()
   const [form, setForm] = useState<FormState>(() =>
     activity ? fromActivity(activity) : emptyForm(defaults),
@@ -155,6 +159,8 @@ function ActivityDialogForm({
       waitingOnPersonId: form.waitingOnPersonId,
       waitingReason: form.waitingReason.trim(),
       driveUrl: form.driveUrl.trim(),
+      categoryId:
+        form.projectId === NONE_PROJECT ? null : form.categoryId,
     }
     if (activity) {
       updateActivity(activity.id, payload)
@@ -227,7 +233,22 @@ function ActivityDialogForm({
         <Field label="Progetto">
           <AppSelect
             value={form.projectId}
-            onChange={(value) => patch("projectId", value)}
+            onChange={(value) => {
+              setForm((current) => {
+                const nextProject =
+                  value === NONE_PROJECT
+                    ? undefined
+                    : store.projects.find((project) => project.id === value)
+                const keep = nextProject?.categories.some(
+                  (category) => category.id === current.categoryId,
+                )
+                return {
+                  ...current,
+                  projectId: value,
+                  categoryId: keep ? current.categoryId : null,
+                }
+              })
+            }}
             options={[
               { value: NONE_PROJECT, label: "Nessun progetto" },
               ...store.projects.map((project) => ({
@@ -237,6 +258,22 @@ function ActivityDialogForm({
             ]}
           />
         </Field>
+        {form.projectId !== NONE_PROJECT ? (
+          <Field label="Categoria" htmlFor="act-category">
+            <CategoryField
+              id="act-category"
+              categories={
+                store.projects.find((project) => project.id === form.projectId)
+                  ?.categories ?? []
+              }
+              value={form.categoryId ? [form.categoryId] : []}
+              onChange={(ids) => patch("categoryId", ids[0] ?? null)}
+              onCreate={(name) => upsertCategory(form.projectId, name)}
+              multiple={false}
+              placeholder="Applicativo, infrastruttura, documentazione"
+            />
+          </Field>
+        ) : null}
         <Field label="Svolta da" htmlFor="act-assignees">
           <PersonField
             id="act-assignees"

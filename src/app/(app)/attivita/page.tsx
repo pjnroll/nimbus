@@ -10,9 +10,15 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels"
 import { sortByDueThenPriority } from "@/lib/selectors"
+import { activityCategoryName } from "@/lib/categories"
 import { activityPersonHaystack } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
-import { NONE_PROJECT, type Activity, type ActivityStatus } from "@/lib/types"
+import {
+  NONE_CATEGORY,
+  NONE_PROJECT,
+  type Activity,
+  type ActivityStatus,
+} from "@/lib/types"
 
 const ALL = "__all__"
 
@@ -22,6 +28,7 @@ export default function AttivitaPage() {
   const [status, setStatus] = useState(ALL)
   const [type, setType] = useState(ALL)
   const [projectId, setProjectId] = useState(ALL)
+  const [categoryId, setCategoryId] = useState(ALL)
   const [selected, setSelected] = useState<Activity | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -38,12 +45,24 @@ export default function AttivitaPage() {
       ) {
         return false
       }
+      if (
+        projectId !== ALL &&
+        projectId !== NONE_PROJECT &&
+        categoryId !== ALL
+      ) {
+        if (categoryId === NONE_CATEGORY) {
+          if (activity.categoryId) return false
+        } else if (activity.categoryId !== categoryId) {
+          return false
+        }
+      }
       if (!needle) return true
       const project = store.projects.find((item) => item.id === activity.projectId)
       const haystack = [
         activity.title,
         activity.description,
         activityPersonHaystack(store.people, activity),
+        activityCategoryName(store, activity),
         project?.name ?? "",
       ]
         .join(" ")
@@ -51,7 +70,12 @@ export default function AttivitaPage() {
       return haystack.includes(needle)
     })
     return sortByDueThenPriority(list)
-  }, [store.activities, store.projects, store.people, query, status, type, projectId])
+  }, [store.activities, store.projects, store.people, query, status, type, projectId, categoryId])
+
+  const selectedProject =
+    projectId !== ALL && projectId !== NONE_PROJECT
+      ? store.projects.find((project) => project.id === projectId)
+      : undefined
 
   const boardStatuses: ActivityStatus[] = ["in_corso", "in_attesa", "fatto"]
 
@@ -80,7 +104,11 @@ export default function AttivitaPage() {
         <Button onClick={() => setCreating(true)}>Nuova attività</Button>
       </header>
 
-      <div className="grid gap-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        className={`grid gap-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10 sm:grid-cols-2 ${
+          selectedProject ? "lg:grid-cols-5" : "lg:grid-cols-4"
+        }`}
+      >
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -110,7 +138,10 @@ export default function AttivitaPage() {
         />
         <AppSelect
           value={projectId}
-          onChange={setProjectId}
+          onChange={(value) => {
+            setProjectId(value)
+            setCategoryId(ALL)
+          }}
           options={[
             { value: ALL, label: "Tutti i progetti" },
             { value: NONE_PROJECT, label: "Senza progetto" },
@@ -120,6 +151,20 @@ export default function AttivitaPage() {
             })),
           ]}
         />
+        {selectedProject ? (
+          <AppSelect
+            value={categoryId}
+            onChange={setCategoryId}
+            options={[
+              { value: ALL, label: "Tutte le categorie" },
+              { value: NONE_CATEGORY, label: "Senza categoria" },
+              ...selectedProject.categories.map((category) => ({
+                value: category.id,
+                label: category.name,
+              })),
+            ]}
+          />
+        ) : null}
       </div>
 
       <Tabs defaultValue="bacheca">

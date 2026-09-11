@@ -2,6 +2,7 @@ import { nowISO } from "@/lib/dates"
 import {
   isLegacyNimbusStore,
   isNimbusStore,
+  isV2NimbusStore,
   type Activity,
   type NimbusStore,
   type Person,
@@ -143,10 +144,12 @@ function upsertFromName(
   return person.id
 }
 
-type LegacyProject = Omit<Project, "personIds"> & { people?: unknown }
+type LegacyProject = Omit<Project, "personIds" | "categories"> & {
+  people?: unknown
+}
 type LegacyActivity = Omit<
   Activity,
-  "assigneeIds" | "requesterId" | "waitingOnPersonId"
+  "assigneeIds" | "requesterId" | "waitingOnPersonId" | "categoryId"
 > & {
   requester?: unknown
   waitingOn?: unknown
@@ -168,7 +171,7 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
             .map((name) => upsertFromName(people, byKey, name))
             .filter((id): id is string => Boolean(id))
         : []
-    return { ...rest, personIds }
+    return { ...rest, personIds, categories: [] }
   })
 
   const activities: Activity[] = legacy.activities.map((activity) => {
@@ -184,18 +187,65 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
         typeof waitingOn === "string"
           ? upsertFromName(people, byKey, waitingOn)
           : null,
+      categoryId: null,
     }
   })
 
-  return { version: 2, people, projects, activities }
+  return { version: 3, people, projects, activities }
+}
+
+export function migrateV2Store(value: unknown): NimbusStore {
+  const v2 = value as {
+    people: NimbusStore["people"]
+    projects: Array<Omit<Project, "categories"> & { categories?: unknown }>
+    activities: Array<
+      Omit<Activity, "categoryId"> & { categoryId?: unknown }
+    >
+  }
+  return {
+    version: 3,
+    people: v2.people,
+    projects: v2.projects.map((project) => ({
+      ...project,
+      categories: Array.isArray(project.categories)
+        ? (project.categories as Project["categories"])
+        : [],
+    })),
+    activities: v2.activities.map((activity) => ({
+      ...activity,
+      categoryId:
+        typeof activity.categoryId === "string" ? activity.categoryId : null,
+    })),
+  }
+}
+
+function ensureCategories(store: NimbusStore): NimbusStore {
+  return {
+    ...store,
+    version: 3,
+    projects: store.projects.map((project) => ({
+      ...project,
+      categories: Array.isArray(project.categories) ? project.categories : [],
+    })),
+    activities: store.activities.map((activity) => ({
+      ...activity,
+      categoryId:
+        typeof activity.categoryId === "string" ? activity.categoryId : null,
+    })),
+  }
 }
 
 export function coerceNimbusStore(
   value: unknown,
 ): { store: NimbusStore; migrated: boolean } | null {
-  if (isNimbusStore(value)) return { store: value, migrated: false }
+  if (isNimbusStore(value)) {
+    return { store: ensureCategories(value), migrated: false }
+  }
+  if (isV2NimbusStore(value)) {
+    return { store: ensureCategories(migrateV2Store(value)), migrated: true }
+  }
   if (isLegacyNimbusStore(value)) {
-    return { store: migrateLegacyStore(value), migrated: true }
+    return { store: ensureCategories(migrateLegacyStore(value)), migrated: true }
   }
   return null
 }

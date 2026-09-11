@@ -9,6 +9,11 @@ export type Person = {
   name: string
 }
 
+export type Category = {
+  id: string
+  name: string
+}
+
 export type Project = {
   id: string
   name: string
@@ -16,6 +21,7 @@ export type Project = {
   status: ProjectStatus
   driveUrl: string
   personIds: string[]
+  categories: Category[]
   notes: string
   createdAt: string
   updatedAt: string
@@ -36,12 +42,13 @@ export type Activity = {
   waitingOnPersonId: string | null
   waitingReason: string
   driveUrl: string
+  categoryId: string | null
   createdAt: string
   updatedAt: string
 }
 
 export type NimbusStore = {
-  version: 2
+  version: 3
   people: Person[]
   projects: Project[]
   activities: Activity[]
@@ -49,10 +56,27 @@ export type NimbusStore = {
 
 export const STORE_KEY = "nimbus.laviano.v1"
 export const NONE_PROJECT = "__none__"
+export const NONE_CATEGORY = "__none__"
 
 export function isNimbusStore(value: unknown): value is NimbusStore {
   if (!value || typeof value !== "object") return false
   const candidate = value as Partial<NimbusStore>
+  return (
+    candidate.version === 3 &&
+    Array.isArray(candidate.people) &&
+    Array.isArray(candidate.projects) &&
+    Array.isArray(candidate.activities)
+  )
+}
+
+export function isV2NimbusStore(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false
+  const candidate = value as {
+    version?: unknown
+    people?: unknown
+    projects?: unknown
+    activities?: unknown
+  }
   return (
     candidate.version === 2 &&
     Array.isArray(candidate.people) &&

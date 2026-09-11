@@ -1,20 +1,23 @@
 "use client"
 
 import Link from "next/link"
-import { use, useMemo, useState } from "react"
+import { use, useEffect, useMemo, useState } from "react"
 import { ExternalLinkIcon } from "lucide-react"
 import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
 import { ProjectDialog } from "@/components/project-dialog"
+import { CategoryBadge } from "@/components/status-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { personNames } from "@/lib/people"
 import { openActivities, sortByDueThenPriority } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
-import type { Activity } from "@/lib/types"
+import { NONE_CATEGORY, type Activity } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+const ALL = "__all__"
 
 export default function ProjectDetailPage({
   params,
@@ -27,16 +30,34 @@ export default function ProjectDetailPage({
   const [editing, setEditing] = useState(false)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Activity | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState(ALL)
   const peopleLabel = project
     ? personNames(store.people, project.personIds)
     : ""
+
+  useEffect(() => {
+    setCategoryFilter(ALL)
+  }, [id])
+
+  useEffect(() => {
+    if (!project) return
+    if (categoryFilter === ALL || categoryFilter === NONE_CATEGORY) return
+    if (!project.categories.some((category) => category.id === categoryFilter)) {
+      setCategoryFilter(ALL)
+    }
+  }, [project, categoryFilter])
 
   const activities = useMemo(() => {
     const mine = store.activities.filter((activity) => activity.projectId === id)
     return sortByDueThenPriority(mine)
   }, [store.activities, id])
 
-  const open = openActivities(activities)
+  const openAll = openActivities(activities)
+  const open = openAll.filter((activity) => {
+    if (categoryFilter === ALL) return true
+    if (categoryFilter === NONE_CATEGORY) return !activity.categoryId
+    return activity.categoryId === categoryFilter
+  })
 
   if (!project) {
     return (
@@ -84,6 +105,13 @@ export default function ProjectDetailPage({
           {peopleLabel ? (
             <p className="mt-2 text-sm text-muted-foreground">{peopleLabel}</p>
           ) : null}
+          {project.categories.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {project.categories.map((category) => (
+                <CategoryBadge key={category.id} name={category.name} />
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {project.driveUrl ? (
@@ -109,10 +137,41 @@ export default function ProjectDetailPage({
         <div>
           <h2 className="font-heading text-xl font-medium">Attività aperte</h2>
           <p className="text-sm text-muted-foreground">
-            {open.length === 1 ? "1 aperta" : `${open.length} aperte`} su{" "}
+            {openAll.length === 1 ? "1 aperta" : `${openAll.length} aperte`} su{" "}
             {activities.length} totali.
           </p>
         </div>
+        {project.categories.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              type="button"
+              size="xs"
+              variant={categoryFilter === ALL ? "default" : "outline"}
+              onClick={() => setCategoryFilter(ALL)}
+            >
+              Tutte
+            </Button>
+            <Button
+              type="button"
+              size="xs"
+              variant={categoryFilter === NONE_CATEGORY ? "default" : "outline"}
+              onClick={() => setCategoryFilter(NONE_CATEGORY)}
+            >
+              Senza categoria
+            </Button>
+            {project.categories.map((category) => (
+              <Button
+                key={category.id}
+                type="button"
+                size="xs"
+                variant={categoryFilter === category.id ? "default" : "outline"}
+                onClick={() => setCategoryFilter(category.id)}
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
+        ) : null}
         <ActivityList
           activities={open}
           projects={store.projects}
