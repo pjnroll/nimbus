@@ -15,6 +15,72 @@ export function addDaysISO(days: number, from = new Date()): string {
   return toISODate(next)
 }
 
+export const HOME_RANGES = ["oggi", "settimana", "7giorni", "mese"] as const
+export type HomeRange = (typeof HOME_RANGES)[number]
+
+export function isHomeRange(value: string): value is HomeRange {
+  return (HOME_RANGES as readonly string[]).includes(value)
+}
+
+export function startOfWeekMonday(iso = todayISO()): string {
+  const date = parseISODate(iso)
+  const weekday = date.getDay()
+  const offset = weekday === 0 ? -6 : 1 - weekday
+  return addDaysISO(offset, date)
+}
+
+export function endOfWeekSunday(iso = todayISO()): string {
+  return addDaysISO(6, parseISODate(startOfWeekMonday(iso)))
+}
+
+export function startOfMonth(iso = todayISO()): string {
+  const date = parseISODate(iso)
+  return toISODate(new Date(date.getFullYear(), date.getMonth(), 1))
+}
+
+export function endOfMonth(iso = todayISO()): string {
+  const date = parseISODate(iso)
+  return toISODate(new Date(date.getFullYear(), date.getMonth() + 1, 0))
+}
+
+export function homeRangeBounds(
+  range: HomeRange,
+  today = todayISO(),
+): { from: string; to: string } {
+  switch (range) {
+    case "oggi":
+      return { from: today, to: today }
+    case "settimana":
+      return { from: startOfWeekMonday(today), to: endOfWeekSunday(today) }
+    case "7giorni":
+      return { from: today, to: addDaysISO(6, parseISODate(today)) }
+    case "mese":
+      return { from: startOfMonth(today), to: endOfMonth(today) }
+  }
+}
+
+export function formatRangeIT(from: string, to: string): string {
+  if (from === to) return formatLongDateIT(from)
+  const start = parseISODate(from)
+  const end = parseISODate(to)
+  const sameMonth =
+    start.getMonth() === end.getMonth() &&
+    start.getFullYear() === end.getFullYear()
+  if (sameMonth) {
+    return `${start.getDate()}–${end.toLocaleDateString("it-IT", {
+      day: "numeric",
+      month: "long",
+    })}`
+  }
+  return `${start.toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "short",
+  })} – ${end.toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "short",
+  })}`
+}
+
 export function parseISODate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number)
   return new Date(y, (m ?? 1) - 1, d ?? 1)

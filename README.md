@@ -6,7 +6,7 @@ I dati stanno in un file JSON sul server (`data/nimbus.json`). Restano dopo uno 
 
 ## Cosa fa
 
-- **Oggi**: ritardi, scadenze di oggi, inbox da smistare, persone da sollecitare.
+- **Oggi**: vista a periodo (oggi, settimana lun–dom, 7 giorni, mese) con attività raggruppate per stato; inbox da smistare.
 - **Inbox**: cattura in dieci secondi, poi smisti progetto, tipo e data.
 - **Attività**: filtri per stato, tipo (eseguo / coordino) e progetto; lista o bacheca.
 - **Progetti**: schede con attività aperte e URL Drive incollato a mano.

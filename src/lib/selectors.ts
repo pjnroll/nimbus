@@ -33,6 +33,52 @@ export function waitingActivities(activities: Activity[]): Activity[] {
   return activities.filter((activity) => activity.status === "in_attesa")
 }
 
+export function dueInRange(
+  activities: Activity[],
+  from: string,
+  to: string,
+): Activity[] {
+  return activities.filter((activity) => {
+    const due = activity.dueDate
+    return due !== null && due >= from && due <= to
+  })
+}
+
+export function homePeriodGroups(
+  activities: Activity[],
+  from: string,
+  to: string,
+  today = todayISO(),
+): {
+  overdue: Activity[]
+  inCorso: Activity[]
+  inAttesa: Activity[]
+  fatto: Activity[]
+} {
+  const overdue = sortByDueThenPriority(overdueActivities(activities, today))
+  const overdueIds = new Set(overdue.map((activity) => activity.id))
+  const inRange = dueInRange(activities, from, to)
+
+  return {
+    overdue,
+    inCorso: sortByDueThenPriority(
+      inRange.filter(
+        (activity) =>
+          activity.status === "in_corso" && !overdueIds.has(activity.id),
+      ),
+    ),
+    inAttesa: sortByDueThenPriority(
+      inRange.filter(
+        (activity) =>
+          activity.status === "in_attesa" && !overdueIds.has(activity.id),
+      ),
+    ),
+    fatto: sortByDueThenPriority(
+      inRange.filter((activity) => activity.status === "fatto"),
+    ),
+  }
+}
+
 export function projectOpenCount(
   store: NimbusStore,
   projectId: string,

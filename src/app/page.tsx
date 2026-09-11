@@ -5,36 +5,57 @@ import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { greetingForNow, formatLongDateIT, todayISO } from "@/lib/dates"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  dueTodayActivities,
+  formatRangeIT,
+  greetingForNow,
+  homeRangeBounds,
+  isHomeRange,
+  todayISO,
+  type HomeRange,
+} from "@/lib/dates"
+import {
+  homePeriodGroups,
   inboxActivities,
-  overdueActivities,
   sortByDueThenPriority,
-  waitingActivities,
 } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import type { Activity } from "@/lib/types"
 
+const RANGE_TABS: { id: HomeRange; label: string }[] = [
+  { id: "oggi", label: "Oggi" },
+  { id: "settimana", label: "Questa settimana" },
+  { id: "7giorni", label: "Prossimi 7 giorni" },
+  { id: "mese", label: "Questo mese" },
+]
+
+function headingForRange(range: HomeRange): string {
+  const hello = greetingForNow()
+  switch (range) {
+    case "oggi":
+      return `${hello}. Questa è la giornata.`
+    case "settimana":
+      return `${hello}. Questa è la settimana.`
+    case "7giorni":
+      return `${hello}. I prossimi sette giorni.`
+    case "mese":
+      return `${hello}. Questo è il mese.`
+  }
+}
+
 export default function OggiPage() {
   const { store, updateActivity, deleteActivity } = useNimbus()
   const [selected, setSelected] = useState<Activity | null>(null)
+  const [range, setRange] = useState<HomeRange>("settimana")
   const today = todayISO()
+  const { from, to } = homeRangeBounds(range, today)
 
-  const overdue = useMemo(
-    () => sortByDueThenPriority(overdueActivities(store.activities, today)),
-    [store.activities, today],
-  )
-  const dueToday = useMemo(
-    () => sortByDueThenPriority(dueTodayActivities(store.activities, today)),
-    [store.activities, today],
+  const groups = useMemo(
+    () => homePeriodGroups(store.activities, from, to, today),
+    [store.activities, from, to, today],
   )
   const inbox = useMemo(
-    () => inboxActivities(store.activities),
-    [store.activities],
-  )
-  const waiting = useMemo(
-    () => sortByDueThenPriority(waitingActivities(store.activities)),
+    () => sortByDueThenPriority(inboxActivities(store.activities)),
     [store.activities],
   )
 
@@ -49,45 +70,64 @@ export default function OggiPage() {
   }
 
   const calm =
-    overdue.length === 0 && inbox.length === 0 && dueToday.length === 0
+    groups.overdue.length === 0 &&
+    inbox.length === 0 &&
+    groups.inCorso.length === 0 &&
+    groups.inAttesa.length === 0
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="text-sm text-muted-foreground capitalize">
-          {formatLongDateIT(today)}
-        </p>
-        <h1 className="font-heading mt-1 text-3xl font-semibold tracking-tight">
-          {greetingForNow()}. Questa è la giornata.
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Non è un foglio: prima i ritardi, poi ciò che scade oggi, poi le
-          richieste da smistare e le persone da sollecitare.
-        </p>
+      <header className="flex flex-col gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground capitalize">
+            {formatRangeIT(from, to)}
+          </p>
+          <h1 className="font-heading mt-1 text-3xl font-semibold tracking-tight">
+            {headingForRange(range)}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Prima i ritardi, poi ciò che cade in questa finestra: in corso, in
+            attesa, fatto. L’inbox resta da smistare a parte.
+          </p>
+        </div>
+        <Tabs
+          value={range}
+          onValueChange={(next) => {
+            if (typeof next === "string" && isHomeRange(next)) setRange(next)
+          }}
+        >
+          <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start sm:w-fit">
+            {RANGE_TABS.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="In ritardo" value={overdue.length} tone="danger" />
-        <Stat label="Scadono oggi" value={dueToday.length} tone="warn" />
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <Stat label="In ritardo" value={groups.overdue.length} tone="danger" />
+        <Stat label="In corso" value={groups.inCorso.length} tone="warn" />
+        <Stat label="In attesa" value={groups.inAttesa.length} tone="neutral" />
+        <Stat label="Fatto" value={groups.fatto.length} tone="ok" />
         <Stat label="Da smistare" value={inbox.length} tone="info" />
-        <Stat label="In attesa di altri" value={waiting.length} tone="neutral" />
       </section>
 
       {calm ? (
         <Alert>
           <AlertTitle>Scrivania in ordine</AlertTitle>
           <AlertDescription>
-            Niente in ritardo e niente da smistare. Se arriva una mail o una
-            chat, catturala in Inbox invece di aprirla in un’altra riga del
-            foglio.
+            Niente in ritardo, niente da smistare e niente aperto in questa
+            finestra. Se arriva una mail o una chat, catturala in Inbox.
           </AlertDescription>
         </Alert>
       ) : null}
 
       <Section
         title="In ritardo"
-        hint="Chiudi queste prima di tutto il resto."
-        activities={overdue}
+        hint="Anche se la scadenza è prima di questa finestra: i debiti restano qui."
+        activities={groups.overdue}
         projects={store.projects}
         onOpen={setSelected}
         onStatus={onStatus}
@@ -96,19 +136,41 @@ export default function OggiPage() {
         emptyDescription="Le scadenze aperte sono tutte nel futuro, o non hanno data."
       />
       <Section
-        title="Scadono oggi"
-        hint="Il lavoro della giornata, senza le altre colonne."
-        activities={dueToday}
+        title="In corso"
+        hint="Aperture con scadenza in questa finestra, senza i ritardi."
+        activities={groups.inCorso}
         projects={store.projects}
         onOpen={setSelected}
         onStatus={onStatus}
         onDelete={onDelete}
-        emptyTitle="Niente in scadenza oggi"
-        emptyDescription="Se serve una data, aprila e impostala: altrimenti resta invisibile qui."
+        emptyTitle="Niente in corso"
+        emptyDescription="Non ci sono attività in corso con scadenza in queste date."
       />
       <Section
-        title="Inbox da smistare"
-        hint="Dieci secondi: progetto, tipo, scadenza."
+        title="In attesa"
+        hint="Stai coordinando: il blocco è da un’altra parte, ma la data cade qui."
+        activities={groups.inAttesa}
+        projects={store.projects}
+        onOpen={setSelected}
+        onStatus={onStatus}
+        onDelete={onDelete}
+        emptyTitle="Nessuno in attesa"
+        emptyDescription="Niente in attesa con scadenza in questa finestra."
+      />
+      <Section
+        title="Fatto"
+        hint="Chiuse, con la scadenza in questa finestra."
+        activities={groups.fatto}
+        projects={store.projects}
+        onOpen={setSelected}
+        onStatus={onStatus}
+        onDelete={onDelete}
+        emptyTitle="Niente di chiuso"
+        emptyDescription="Le attività fatte con scadenza in queste date compariranno qui."
+      />
+      <Section
+        title="Da smistare"
+        hint="Inbox globale: dieci secondi, progetto, tipo, scadenza."
         activities={inbox}
         projects={store.projects}
         onOpen={setSelected}
@@ -116,17 +178,6 @@ export default function OggiPage() {
         onDelete={onDelete}
         emptyTitle="Inbox vuota"
         emptyDescription="Le nuove richieste da email o chat vanno catturate in Inbox."
-      />
-      <Section
-        title="Da sollecitare"
-        hint="Attività che stai coordinando: il blocco è da un’altra parte."
-        activities={waiting}
-        projects={store.projects}
-        onOpen={setSelected}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle="Nessuno in attesa"
-        emptyDescription="Quando coordini, metti lo stato In attesa e indica di chi stai aspettando."
       />
 
       <ActivityDialog
@@ -147,13 +198,14 @@ function Stat({
 }: {
   label: string
   value: number
-  tone: "danger" | "warn" | "info" | "neutral"
+  tone: "danger" | "warn" | "info" | "neutral" | "ok"
 }) {
   const tones = {
     danger: "bg-red-50 text-red-900 ring-red-100",
     warn: "bg-amber-50 text-amber-950 ring-amber-100",
     info: "bg-sky-50 text-sky-950 ring-sky-100",
     neutral: "bg-card text-foreground ring-foreground/10",
+    ok: "bg-emerald-50 text-emerald-950 ring-emerald-100",
   }
   return (
     <div className={`rounded-xl px-4 py-3 ring-1 ${tones[tone]}`}>
