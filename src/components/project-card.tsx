@@ -5,6 +5,8 @@ import { ExternalLinkIcon, FolderOpenIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
+import { personNames } from "@/lib/people"
+import { useNimbus } from "@/lib/store"
 import type { Project } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +17,8 @@ export function ProjectCard({
   project: Project
   openCount: number
 }) {
+  const { store } = useNimbus()
+  const peopleLabel = personNames(store.people, project.personIds)
   const statusStyle: Record<Project["status"], string> = {
     attivo: "border-green-200 bg-green-50 text-green-800",
     in_attesa: "border-amber-200 bg-amber-50 text-amber-900",
@@ -45,8 +49,8 @@ export function ProjectCard({
           {project.notes}
         </p>
       ) : null}
-      {project.people ? (
-        <p className="mt-2 text-xs text-muted-foreground">{project.people}</p>
+      {peopleLabel ? (
+        <p className="mt-2 text-xs text-muted-foreground">{peopleLabel}</p>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <Button

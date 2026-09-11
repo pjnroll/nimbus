@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth/session"
+import { coerceNimbusStore } from "@/lib/people"
 import { readStore, writeStore } from "@/lib/persist-store"
-import { isNimbusStore } from "@/lib/types"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -29,14 +29,15 @@ export async function PUT(request: Request) {
   }
   try {
     const body: unknown = await request.json()
-    if (!isNimbusStore(body)) {
+    const coerced = coerceNimbusStore(body)
+    if (!coerced) {
       return NextResponse.json(
         { error: "JSON non riconosciuto come dati Nimbus" },
         { status: 400 },
       )
     }
-    await writeStore(session.id, body)
-    return NextResponse.json({ store: body, created: false })
+    await writeStore(session.id, coerced.store)
+    return NextResponse.json({ store: coerced.store, created: false })
   } catch {
     return NextResponse.json(
       { error: "Non riesco a salvare i dati" },

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
+import { PersonField } from "@/components/person-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SOURCE_LABELS } from "@/lib/labels"
@@ -10,10 +11,10 @@ import { useNimbus } from "@/lib/store"
 import type { ActivitySource } from "@/lib/types"
 
 export function CaptureBar() {
-  const { addActivity } = useNimbus()
+  const { store, addActivity, upsertPerson } = useNimbus()
   const [title, setTitle] = useState("")
   const [source, setSource] = useState<ActivitySource>("email")
-  const [requester, setRequester] = useState("")
+  const [requesterId, setRequesterId] = useState<string | null>(null)
 
   function capture() {
     if (!title.trim()) {
@@ -25,17 +26,18 @@ export function CaptureBar() {
       description: "",
       projectId: null,
       source,
-      requester: requester.trim(),
+      requesterId,
       type: "eseguo",
       status: "inbox",
       priority: "media",
       dueDate: null,
-      waitingOn: "",
+      assigneeIds: [],
+      waitingOnPersonId: null,
       waitingReason: "",
       driveUrl: "",
     })
     setTitle("")
-    setRequester("")
+    setRequesterId(null)
     toast.success("Richiesta in inbox. Smistala quando hai un minuto.")
   }
 
@@ -73,10 +75,13 @@ export function CaptureBar() {
         <label htmlFor="capture-who" className="text-xs font-medium">
           Da chi
         </label>
-        <Input
+        <PersonField
           id="capture-who"
-          value={requester}
-          onChange={(event) => setRequester(event.target.value)}
+          people={store.people}
+          value={requesterId ? [requesterId] : []}
+          onChange={(ids) => setRequesterId(ids[0] ?? null)}
+          onCreate={upsertPerson}
+          multiple={false}
           placeholder="Richiedente"
         />
       </div>

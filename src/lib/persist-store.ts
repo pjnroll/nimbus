@@ -1,22 +1,26 @@
 import { readFile, unlink } from "node:fs/promises"
 import { isNotFound, legacyStorePath, userStorePath } from "@/lib/data-dir"
 import { enqueue, writeJsonAtomic } from "@/lib/persist-fs"
+import { coerceNimbusStore } from "@/lib/people"
 import { SEED_STORE } from "@/lib/seed"
-import { isNimbusStore, type NimbusStore } from "@/lib/types"
+import type { NimbusStore } from "@/lib/types"
 
 export type PersistedStore = {
   store: NimbusStore
   created: boolean
 }
 
-async function readJsonStore(file: string): Promise<NimbusStore | null> {
+async function readJsonStore(
+  file: string,
+): Promise<{ store: NimbusStore; migrated: boolean } | null> {
   try {
     const raw = await readFile(file, "utf8")
     const parsed: unknown = JSON.parse(raw)
-    if (!isNimbusStore(parsed)) {
+    const coerced = coerceNimbusStore(parsed)
+    if (!coerced) {
       throw new Error("File dati Nimbus non valido")
     }
-    return parsed
+    return coerced
   } catch (error) {
     if (isNotFound(error)) return null
     throw error
@@ -31,7 +35,7 @@ export async function provisionUserStore(
   if (migrateLegacy) {
     const legacy = await readJsonStore(legacyStorePath())
     if (legacy) {
-      await writeJsonAtomic(dest, legacy)
+      await writeJsonAtomic(dest, legacy.store)
       await unlink(legacyStorePath()).catch(() => undefined)
       return
     }
@@ -43,7 +47,12 @@ export function readStore(userId: string): Promise<PersistedStore> {
   return enqueue(async () => {
     const file = userStorePath(userId)
     const existing = await readJsonStore(file)
-    if (existing) return { store: existing, created: false }
+    if (existing) {
+      if (existing.migrated) {
+        await writeJsonAtomic(file, existing.store)
+      }
+      return { store: existing.store, created: false }
+    }
     await writeJsonAtomic(file, SEED_STORE)
     return { store: SEED_STORE, created: true }
   })

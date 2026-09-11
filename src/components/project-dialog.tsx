@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { PersonField } from "@/components/person-field"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
 import type { Project, ProjectStatus } from "@/lib/types"
@@ -24,7 +25,7 @@ type FormState = {
   client: string
   status: ProjectStatus
   driveUrl: string
-  people: string
+  personIds: string[]
   notes: string
 }
 
@@ -34,7 +35,7 @@ function emptyForm(): FormState {
     client: "",
     status: "attivo",
     driveUrl: "",
-    people: "",
+    personIds: [],
     notes: "",
   }
 }
@@ -45,7 +46,7 @@ function fromProject(project: Project): FormState {
     client: project.client,
     status: project.status,
     driveUrl: project.driveUrl,
-    people: project.people,
+    personIds: project.personIds,
     notes: project.notes,
   }
 }
@@ -83,7 +84,8 @@ function ProjectDialogForm({
   onCreated?: (id: string) => void
   onOpenChange: (open: boolean) => void
 }) {
-  const { addProject, updateProject, deleteProject } = useNimbus()
+  const { store, addProject, updateProject, deleteProject, upsertPerson } =
+    useNimbus()
   const [form, setForm] = useState<FormState>(() =>
     project ? fromProject(project) : emptyForm(),
   )
@@ -103,7 +105,7 @@ function ProjectDialogForm({
       client: form.client.trim(),
       status: form.status,
       driveUrl: form.driveUrl.trim(),
-      people: form.people.trim(),
+      personIds: form.personIds,
       notes: form.notes.trim(),
     }
     if (project) {
@@ -181,13 +183,13 @@ function ProjectDialogForm({
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="prj-people">Persone coinvolte</Label>
-          <Input
+          <PersonField
             id="prj-people"
-            value={form.people}
-            onChange={(event) =>
-              setForm({ ...form, people: event.target.value })
-            }
-            placeholder="Nomi, ruoli, team"
+            people={store.people}
+            value={form.personIds}
+            onChange={(personIds) => setForm({ ...form, personIds })}
+            onCreate={upsertPerson}
+            placeholder="Nome, poi Invio per aggiungere"
           />
         </div>
         <div className="grid gap-1.5">

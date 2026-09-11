@@ -13,6 +13,8 @@ import {
 import { PriorityBadge, StatusBadge, TypeBadge } from "@/components/status-badges"
 import { formatDateIT, isOverdue, todayISO } from "@/lib/dates"
 import { SOURCE_LABELS } from "@/lib/labels"
+import { personName, personNames } from "@/lib/people"
+import { useNimbus } from "@/lib/store"
 import type { Activity, Project } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -29,6 +31,10 @@ export function ActivityCard({
   onStatus: (status: Activity["status"]) => void
   onDelete: () => void
 }) {
+  const { store } = useNimbus()
+  const requesterName = personName(store.people, activity.requesterId)
+  const waitingOnName = personName(store.people, activity.waitingOnPersonId)
+  const assigneeLabel = personNames(store.people, activity.assigneeIds)
   const overdue =
     activity.status !== "fatto" &&
     activity.status !== "inbox" &&
@@ -63,7 +69,7 @@ export function ActivityCard({
               <dt className="sr-only">Origine</dt>
               <dd>
                 {SOURCE_LABELS[activity.source]}
-                {activity.requester ? ` · ${activity.requester}` : ""}
+                {requesterName ? ` · ${requesterName}` : ""}
               </dd>
             </div>
             {project ? (
@@ -77,6 +83,12 @@ export function ActivityCard({
                 <dd>Senza progetto</dd>
               </div>
             )}
+            {assigneeLabel ? (
+              <div>
+                <dt className="sr-only">Svolta da</dt>
+                <dd>{assigneeLabel}</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="sr-only">Scadenza</dt>
               <dd className={cn(overdue && "font-medium text-red-700")}>
@@ -85,9 +97,9 @@ export function ActivityCard({
               </dd>
             </div>
           </dl>
-          {activity.status === "in_attesa" && activity.waitingOn ? (
+          {activity.status === "in_attesa" && waitingOnName ? (
             <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-950">
-              In attesa di <span className="font-medium">{activity.waitingOn}</span>
+              In attesa di <span className="font-medium">{waitingOnName}</span>
               {activity.waitingReason ? ` — ${activity.waitingReason}` : ""}
             </p>
           ) : null}

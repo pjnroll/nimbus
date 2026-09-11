@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels"
 import { sortByDueThenPriority } from "@/lib/selectors"
+import { activityPersonHaystack } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
 import { NONE_PROJECT, type Activity, type ActivityStatus } from "@/lib/types"
 
@@ -42,8 +43,7 @@ export default function AttivitaPage() {
       const haystack = [
         activity.title,
         activity.description,
-        activity.requester,
-        activity.waitingOn,
+        activityPersonHaystack(store.people, activity),
         project?.name ?? "",
       ]
         .join(" ")
@@ -51,7 +51,7 @@ export default function AttivitaPage() {
       return haystack.includes(needle)
     })
     return sortByDueThenPriority(list)
-  }, [store.activities, store.projects, query, status, type, projectId])
+  }, [store.activities, store.projects, store.people, query, status, type, projectId])
 
   const boardStatuses: ActivityStatus[] = ["in_corso", "in_attesa", "fatto"]
 

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
+import { PersonField } from "@/components/person-field"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -36,12 +37,13 @@ type FormState = {
   description: string
   projectId: string
   source: ActivitySource
-  requester: string
+  requesterId: string | null
   type: ActivityType
   status: ActivityStatus
   priority: Priority
   dueDate: string
-  waitingOn: string
+  assigneeIds: string[]
+  waitingOnPersonId: string | null
   waitingReason: string
   driveUrl: string
 }
@@ -51,12 +53,13 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   description: "",
   projectId: NONE_PROJECT,
   source: "email",
-  requester: "",
+  requesterId: null,
   type: "eseguo",
   status: "inbox",
   priority: "media",
   dueDate: "",
-  waitingOn: "",
+  assigneeIds: [],
+  waitingOnPersonId: null,
   waitingReason: "",
   driveUrl: "",
   ...defaults,
@@ -68,12 +71,13 @@ function fromActivity(activity: Activity): FormState {
     description: activity.description,
     projectId: activity.projectId ?? NONE_PROJECT,
     source: activity.source,
-    requester: activity.requester,
+    requesterId: activity.requesterId,
     type: activity.type,
     status: activity.status,
     priority: activity.priority,
     dueDate: activity.dueDate ?? "",
-    waitingOn: activity.waitingOn,
+    assigneeIds: activity.assigneeIds,
+    waitingOnPersonId: activity.waitingOnPersonId,
     waitingReason: activity.waitingReason,
     driveUrl: activity.driveUrl,
   }
@@ -117,7 +121,8 @@ function ActivityDialogForm({
   heading?: string
   onOpenChange: (open: boolean) => void
 }) {
-  const { store, addActivity, updateActivity, deleteActivity } = useNimbus()
+  const { store, addActivity, updateActivity, deleteActivity, upsertPerson } =
+    useNimbus()
   const [form, setForm] = useState<FormState>(() =>
     activity ? fromActivity(activity) : emptyForm(defaults),
   )
@@ -141,12 +146,13 @@ function ActivityDialogForm({
       description: form.description.trim(),
       projectId: form.projectId === NONE_PROJECT ? null : form.projectId,
       source: form.source,
-      requester: form.requester.trim(),
+      requesterId: form.requesterId,
       type: form.type,
       status: form.status,
       priority: form.priority,
       dueDate: form.dueDate || null,
-      waitingOn: form.waitingOn.trim(),
+      assigneeIds: form.assigneeIds,
+      waitingOnPersonId: form.waitingOnPersonId,
       waitingReason: form.waitingReason.trim(),
       driveUrl: form.driveUrl.trim(),
     }
@@ -207,10 +213,13 @@ function ActivityDialogForm({
             />
           </Field>
           <Field label="Richiedente" htmlFor="act-req">
-            <Input
+            <PersonField
               id="act-req"
-              value={form.requester}
-              onChange={(event) => patch("requester", event.target.value)}
+              people={store.people}
+              value={form.requesterId ? [form.requesterId] : []}
+              onChange={(ids) => patch("requesterId", ids[0] ?? null)}
+              onCreate={upsertPerson}
+              multiple={false}
               placeholder="Chi te l'ha chiesto"
             />
           </Field>
@@ -226,6 +235,22 @@ function ActivityDialogForm({
                 label: project.name,
               })),
             ]}
+          />
+        </Field>
+        <Field label="Svolta da" htmlFor="act-assignees">
+          <PersonField
+            id="act-assignees"
+            people={store.people}
+            value={form.assigneeIds}
+            onChange={(assigneeIds) => patch("assigneeIds", assigneeIds)}
+            onCreate={upsertPerson}
+            suggestIds={
+              form.projectId === NONE_PROJECT
+                ? []
+                : (store.projects.find((project) => project.id === form.projectId)
+                    ?.personIds ?? [])
+            }
+            placeholder="Chi deve svolgere l’attività"
           />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -273,10 +298,19 @@ function ActivityDialogForm({
         {form.type === "coordino" || form.status === "in_attesa" ? (
           <div className="grid gap-3 rounded-lg bg-amber-50 p-3 sm:grid-cols-2">
             <Field label="In attesa di" htmlFor="act-wait">
-              <Input
+              <PersonField
                 id="act-wait"
-                value={form.waitingOn}
-                onChange={(event) => patch("waitingOn", event.target.value)}
+                people={store.people}
+                value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
+                onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
+                onCreate={upsertPerson}
+                multiple={false}
+                suggestIds={
+                  form.projectId === NONE_PROJECT
+                    ? []
+                    : (store.projects.find((project) => project.id === form.projectId)
+                        ?.personIds ?? [])
+                }
                 placeholder="Nome o team"
               />
             </Field>

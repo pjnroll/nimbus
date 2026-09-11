@@ -11,12 +11,19 @@ import {
 } from "react"
 import { toast } from "sonner"
 import { nowISO } from "@/lib/dates"
+import {
+  activityPersonIds,
+  coerceNimbusStore,
+  linkPeopleToProject,
+  newId,
+  upsertPersonInStore,
+} from "@/lib/people"
 import { SEED_STORE } from "@/lib/seed"
 import {
   STORE_KEY,
-  isNimbusStore,
   type Activity,
   type NimbusStore,
+  type Person,
   type Project,
 } from "@/lib/types"
 
@@ -31,12 +38,14 @@ type StoreContextValue = {
   ) => Activity
   updateActivity: (id: string, patch: Partial<Activity>) => void
   deleteActivity: (id: string) => void
+  upsertPerson: (name: string) => Person | null
   replaceStore: (next: NimbusStore) => void
   resetToSeed: () => void
 }
 
 const EMPTY_STORE: NimbusStore = {
-  version: 1,
+  version: 2,
+  people: [],
   projects: [],
   activities: [],
 }
@@ -60,13 +69,6 @@ export function resetClientStore() {
   persistChain = Promise.resolve()
   emit()
   emitHydrated()
-}
-
-function newId(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 function emit() {
@@ -107,8 +109,7 @@ function readLegacyLocalStore(): NimbusStore | null {
   try {
     const raw = window.localStorage.getItem(STORE_KEY)
     if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    return isNimbusStore(parsed) ? parsed : null
+    return coerceNimbusStore(JSON.parse(raw))?.store ?? null
   } catch {
     return null
   }
@@ -159,9 +160,10 @@ function parseStoreResponse(value: unknown): {
 } | null {
   if (!value || typeof value !== "object") return null
   const candidate = value as { store?: unknown; created?: unknown }
-  if (!isNimbusStore(candidate.store)) return null
+  const coerced = coerceNimbusStore(candidate.store)
+  if (!coerced) return null
   return {
-    store: candidate.store,
+    store: coerced.store,
     created: candidate.created === true,
   }
 }
@@ -218,6 +220,16 @@ function ensureHydrated() {
     hydratePromise = hydrateFromServer()
   }
   return hydratePromise
+}
+
+function withActivityPeople(
+  store: NimbusStore,
+  activity: Pick<
+    Activity,
+    "projectId" | "assigneeIds" | "requesterId" | "waitingOnPersonId"
+  >,
+): NimbusStore {
+  return linkPeopleToProject(store, activity.projectId, activityPersonIds(activity))
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -285,7 +297,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdAt: stamp,
         updatedAt: stamp,
       }
-      const current = getSnapshot()
+      const current = withActivityPeople(getSnapshot(), activity)
       writeStore({
         ...current,
         activities: [activity, ...current.activities],
@@ -297,12 +309,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const updateActivity = useCallback((id: string, patch: Partial<Activity>) => {
     const current = getSnapshot()
+    const previous = current.activities.find((activity) => activity.id === id)
+    if (!previous) return
+    const nextActivity: Activity = {
+      ...previous,
+      ...patch,
+      id,
+      updatedAt: nowISO(),
+    }
+    const linked = withActivityPeople(current, nextActivity)
     writeStore({
-      ...current,
-      activities: current.activities.map((activity) =>
-        activity.id === id
-          ? { ...activity, ...patch, id, updatedAt: nowISO() }
-          : activity,
+      ...linked,
+      activities: linked.activities.map((activity) =>
+        activity.id === id ? nextActivity : activity,
       ),
     })
   }, [])
@@ -313,6 +332,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...current,
       activities: current.activities.filter((activity) => activity.id !== id),
     })
+  }, [])
+
+  const upsertPerson = useCallback((name: string) => {
+    const result = upsertPersonInStore(getSnapshot(), name)
+    if (result.person && result.store !== getSnapshot()) {
+      writeStore(result.store)
+    }
+    return result.person
   }, [])
 
   const replaceStore = useCallback((next: NimbusStore) => {
@@ -333,6 +360,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addActivity,
       updateActivity,
       deleteActivity,
+      upsertPerson,
       replaceStore,
       resetToSeed,
     }),
@@ -345,6 +373,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addActivity,
       updateActivity,
       deleteActivity,
+      upsertPerson,
       replaceStore,
       resetToSeed,
     ],
@@ -362,9 +391,9 @@ export function useNimbus() {
 }
 
 export function parseImportedStore(raw: string): NimbusStore {
-  const parsed: unknown = JSON.parse(raw)
-  if (!isNimbusStore(parsed)) {
+  const coerced = coerceNimbusStore(JSON.parse(raw))
+  if (!coerced) {
     throw new Error("File non riconosciuto come backup Nimbus")
   }
-  return parsed
+  return coerced.store
 }
