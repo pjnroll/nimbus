@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Outfit, Source_Serif_4 } from "next/font/google"
-import { AppShell } from "@/components/app-shell"
-import { Providers } from "@/components/providers"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const outfit = Outfit({
@@ -29,9 +28,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        {children}
+        <Toaster position="bottom-right" theme="light" richColors />
       </body>
     </html>
   )

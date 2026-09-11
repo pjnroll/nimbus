@@ -1,16 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   CalendarDaysIcon,
   CloudIcon,
   FolderKanbanIcon,
   InboxIcon,
   ListTodoIcon,
+  LogOutIcon,
   MenuIcon,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DataMenu } from "@/components/data-menu"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { inboxActivities } from "@/lib/selectors"
-import { useNimbus } from "@/lib/store"
+import { resetClientStore, useNimbus } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 const NAV = [
@@ -154,10 +155,53 @@ function Nav({
 }
 
 function SidebarFooter() {
+  const router = useRouter()
+  const [email, setEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    void fetch("/api/auth/me")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: unknown) => {
+        if (
+          payload &&
+          typeof payload === "object" &&
+          "email" in payload &&
+          typeof payload.email === "string"
+        ) {
+          setEmail(payload.email)
+        }
+      })
+      .catch(() => undefined)
+  }, [])
+
+  async function logout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch {
+      // Still leave the client session.
+    }
+    resetClientStore()
+    router.push("/login")
+    router.refresh()
+  }
+
   return (
-    <div className="mt-auto flex items-center justify-between border-t border-white/10 px-3 py-3">
-      <p className="px-2 text-xs text-sidebar-foreground/60">Dati salvati sul server</p>
-      <DataMenu />
+    <div className="mt-auto space-y-2 border-t border-white/10 px-3 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate px-2 text-xs text-sidebar-foreground/70" title={email ?? undefined}>
+          {email ?? "Dati salvati sul server"}
+        </p>
+        <DataMenu />
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start text-sidebar-foreground/80 hover:bg-white/5 hover:text-sidebar-foreground"
+        onClick={() => void logout()}
+      >
+        <LogOutIcon />
+        Esci
+      </Button>
     </div>
   )
 }

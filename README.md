@@ -2,7 +2,7 @@
 
 Scrivania personale per un Technical Cloud Project Manager. Serve a catturare le richieste che arrivano da email o chat, distinguere ciò che **esegui tu** da ciò che **coordini**, e tenere i progetti con il link alla cartella Drive — senza un foglio che dopo due settimane diventa illeggibile.
 
-I dati stanno in un file JSON sul server (`data/nimbus.json`). Restano dopo uno stop/restart e sono gli stessi da ogni browser. Non c’è login, né sync con Gmail o Google Drive.
+Ogni persona entra con email e password e ha la propria scrivania. I dati stanno in JSON sul server. La sessione dura 24 ore. Non c’è sync con Gmail o Google Drive.
 
 ## Cosa fa
 
@@ -21,26 +21,42 @@ npm install
 npm run dev
 ```
 
-Apri [http://127.0.0.1:43123](http://127.0.0.1:43123).
+Apri [http://127.0.0.1:43123](http://127.0.0.1:43123). Al primo avvio registra un account: se esiste già `data/nimbus.json`, diventa la scrivania di quell’utente. Gli account successivi partono dai dati di esempio.
 
-Al primo avvio vedi dati di esempio (progetti Maggioli-like). Se in questo browser c’erano già dati in localStorage, vengono migrati una volta sul file. Puoi ripristinare l’esempio dal menu **Ripristina esempio**. Per lavorare sui tuoi dati, elimina le attività di esempio o importa un backup.
+In sviluppo, se non imposti `NIMBUS_AUTH_SECRET`, viene usato un secret di default. In produzione il secret è obbligatorio.
 
-## Persistenza
+## Persistenza e autenticazione
 
-Il file di default è `data/nimbus.json` (fuori da git). Per un volume k3s imposta il path:
+Directory di default: `data/` (fuori da git).
+
+- `data/users.json` — account
+- `data/stores/<userId>.json` — scrivania di ciascun utente
+
+Per un volume k3s:
 
 ```bash
-NIMBUS_DATA_PATH=/data/nimbus.json
+NIMBUS_DATA_DIR=/data
+NIMBUS_AUTH_SECRET=una-stringa-lunga-casuale
 ```
+
+`NIMBUS_DATA_PATH` è ancora letto: la cartella del file diventa `dataDir`.
+
+Per chiudere le nuove registrazioni dopo il setup:
+
+```bash
+NIMBUS_ALLOW_REGISTER=false
+```
+
+(Il primo account si può comunque creare se non esiste nessuno.)
 
 ## Backup
 
-Dal menu a tre puntini nella barra laterale:
+Dal menu a tre puntini nella barra laterale (solo i dati dell’utente collegato):
 
-1. **Esporta JSON** — copia del file da tenere in Drive o in locale.
-2. **Importa JSON** — ripristina un backup sul server.
+1. **Esporta JSON** — copia da tenere in Drive o in locale.
+2. **Importa JSON** — ripristina un backup sulla tua scrivania.
 3. **Ripristina esempio** — torna ai dati dimostrativi.
 
 ## Stack
 
-Next.js, TypeScript, Tailwind CSS, shadcn/ui. Nessun database: un JSON su disco.
+Next.js, TypeScript, Tailwind CSS, shadcn/ui. Nessun database: JSON su disco e cookie di sessione firmati.

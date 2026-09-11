@@ -1,5 +1,6 @@
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises"
-import path from "node:path"
+import { readFile, unlink } from "node:fs/promises"
+import { isNotFound, legacyStorePath, userStorePath } from "@/lib/data-dir"
+import { enqueue, writeJsonAtomic } from "@/lib/persist-fs"
 import { SEED_STORE } from "@/lib/seed"
 import { isNimbusStore, type NimbusStore } from "@/lib/types"
 
@@ -8,63 +9,46 @@ export type PersistedStore = {
   created: boolean
 }
 
-let chain: Promise<void> = Promise.resolve()
-
-function enqueue<T>(task: () => Promise<T>): Promise<T> {
-  const run = chain.then(task, task)
-  chain = run.then(
-    () => undefined,
-    () => undefined,
-  )
-  return run
-}
-
-export function resolveDataPath(): string {
-  const fromEnv = process.env.NIMBUS_DATA_PATH?.trim()
-  if (fromEnv) return fromEnv
-  return path.join(process.cwd(), "data", "nimbus.json")
-}
-
-function isNotFound(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code: unknown }).code === "ENOENT"
-  )
-}
-
-async function writeStoreNow(store: NimbusStore): Promise<void> {
-  const file = resolveDataPath()
-  await mkdir(path.dirname(file), { recursive: true })
-  const tmp = `${file}.${process.pid}.tmp`
-  await writeFile(tmp, `${JSON.stringify(store, null, 2)}\n`, "utf8")
+async function readJsonStore(file: string): Promise<NimbusStore | null> {
   try {
-    await rename(tmp, file)
-  } catch {
-    await unlink(file).catch(() => undefined)
-    await rename(tmp, file)
+    const raw = await readFile(file, "utf8")
+    const parsed: unknown = JSON.parse(raw)
+    if (!isNimbusStore(parsed)) {
+      throw new Error("File dati Nimbus non valido")
+    }
+    return parsed
+  } catch (error) {
+    if (isNotFound(error)) return null
+    throw error
   }
 }
 
-export function readStore(): Promise<PersistedStore> {
-  return enqueue(async () => {
-    const file = resolveDataPath()
-    try {
-      const raw = await readFile(file, "utf8")
-      const parsed: unknown = JSON.parse(raw)
-      if (!isNimbusStore(parsed)) {
-        throw new Error("File dati Nimbus non valido")
-      }
-      return { store: parsed, created: false }
-    } catch (error) {
-      if (!isNotFound(error)) throw error
-      await writeStoreNow(SEED_STORE)
-      return { store: SEED_STORE, created: true }
+export async function provisionUserStore(
+  userId: string,
+  migrateLegacy: boolean,
+): Promise<void> {
+  const dest = userStorePath(userId)
+  if (migrateLegacy) {
+    const legacy = await readJsonStore(legacyStorePath())
+    if (legacy) {
+      await writeJsonAtomic(dest, legacy)
+      await unlink(legacyStorePath()).catch(() => undefined)
+      return
     }
+  }
+  await writeJsonAtomic(dest, SEED_STORE)
+}
+
+export function readStore(userId: string): Promise<PersistedStore> {
+  return enqueue(async () => {
+    const file = userStorePath(userId)
+    const existing = await readJsonStore(file)
+    if (existing) return { store: existing, created: false }
+    await writeJsonAtomic(file, SEED_STORE)
+    return { store: SEED_STORE, created: true }
   })
 }
 
-export function writeStore(store: NimbusStore): Promise<void> {
-  return enqueue(() => writeStoreNow(store))
+export function writeStore(userId: string, store: NimbusStore): Promise<void> {
+  return enqueue(() => writeJsonAtomic(userStorePath(userId), store))
 }

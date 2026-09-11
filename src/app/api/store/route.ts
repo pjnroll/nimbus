@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { getSession } from "@/lib/auth/session"
 import { readStore, writeStore } from "@/lib/persist-store"
 import { isNimbusStore } from "@/lib/types"
 
@@ -6,8 +7,12 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET() {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Non autenticato" }, { status: 401 })
+  }
   try {
-    const result = await readStore()
+    const result = await readStore(session.id)
     return NextResponse.json(result)
   } catch {
     return NextResponse.json(
@@ -18,6 +23,10 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Non autenticato" }, { status: 401 })
+  }
   try {
     const body: unknown = await request.json()
     if (!isNimbusStore(body)) {
@@ -26,7 +35,7 @@ export async function PUT(request: Request) {
         { status: 400 },
       )
     }
-    await writeStore(body)
+    await writeStore(session.id, body)
     return NextResponse.json({ store: body, created: false })
   } catch {
     return NextResponse.json(

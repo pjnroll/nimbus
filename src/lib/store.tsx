@@ -52,6 +52,16 @@ let persistChain: Promise<void> = Promise.resolve()
 const listeners = new Set<() => void>()
 const hydratedListeners = new Set<() => void>()
 
+export function resetClientStore() {
+  memory = EMPTY_STORE
+  hydrated = false
+  dirty = false
+  hydratePromise = null
+  persistChain = Promise.resolve()
+  emit()
+  emitHydrated()
+}
+
 function newId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID()
@@ -118,6 +128,11 @@ async function putStore(next: NimbusStore): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(next),
   })
+  if (response.status === 401) {
+    resetClientStore()
+    window.location.assign(new URL("/login", window.location.origin).href)
+    throw new Error("save-failed")
+  }
   if (!response.ok) {
     throw new Error("save-failed")
   }
@@ -154,6 +169,11 @@ function parseStoreResponse(value: unknown): {
 async function hydrateFromServer(): Promise<void> {
   try {
     const response = await fetch("/api/store", { cache: "no-store" })
+    if (response.status === 401) {
+      resetClientStore()
+      window.location.assign(new URL("/login", window.location.origin).href)
+      return
+    }
     if (!response.ok) {
       throw new Error("load-failed")
     }
