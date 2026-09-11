@@ -22,12 +22,14 @@ import { cn } from "@/lib/utils"
 export function ActivityCard({
   activity,
   project,
+  showProjectName = true,
   onOpen,
   onStatus,
   onDelete,
 }: {
   activity: Activity
   project?: Project
+  showProjectName?: boolean
   onOpen: () => void
   onStatus: (status: Activity["status"]) => void
   onDelete: () => void
@@ -61,7 +63,15 @@ export function ActivityCard({
             <PriorityBadge priority={activity.priority} />
             {categoryLabel ? <CategoryBadge name={categoryLabel} /> : null}
           </div>
-          <h3 className="font-heading text-base leading-snug font-medium text-foreground">
+          {showProjectName && project ? (
+            <p className="text-sm font-medium text-foreground">{project.name}</p>
+          ) : null}
+          <h3
+            className={cn(
+              "font-heading text-base leading-snug font-medium text-foreground",
+              showProjectName && project && "mt-0.5",
+            )}
+          >
             {activity.title}
           </h3>
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -75,17 +85,12 @@ export function ActivityCard({
                 {requesterName ? ` · ${requesterName}` : ""}
               </dd>
             </div>
-            {project ? (
-              <div>
-                <dt className="sr-only">Progetto</dt>
-                <dd>{project.name}</dd>
-              </div>
-            ) : (
+            {!project ? (
               <div>
                 <dt className="sr-only">Progetto</dt>
                 <dd>Senza progetto</dd>
               </div>
-            )}
+            ) : null}
             {assigneeLabel ? (
               <div>
                 <dt className="sr-only">Svolta da</dt>

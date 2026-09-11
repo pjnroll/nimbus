@@ -175,6 +175,7 @@ export default function ProjectDetailPage({
         <ActivityList
           activities={open}
           projects={store.projects}
+          showProjectName={false}
           onOpen={setSelected}
           onStatus={(activityId, status) => {
             updateActivity(activityId, { status })
