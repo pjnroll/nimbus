@@ -42,3 +42,13 @@ export type NimbusStore = {
 
 export const STORE_KEY = "nimbus.laviano.v1"
 export const NONE_PROJECT = "__none__"
+
+export function isNimbusStore(value: unknown): value is NimbusStore {
+  if (!value || typeof value !== "object") return false
+  const candidate = value as Partial<NimbusStore>
+  return (
+    candidate.version === 1 &&
+    Array.isArray(candidate.projects) &&
+    Array.isArray(candidate.activities)
+  )
+}

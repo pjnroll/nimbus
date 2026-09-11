@@ -156,7 +156,7 @@ function Nav({
 function SidebarFooter() {
   return (
     <div className="mt-auto flex items-center justify-between border-t border-white/10 px-3 py-3">
-      <p className="px-2 text-xs text-sidebar-foreground/60">Dati solo su questo browser</p>
+      <p className="px-2 text-xs text-sidebar-foreground/60">Dati salvati sul server</p>
       <DataMenu />
     </div>
   )
