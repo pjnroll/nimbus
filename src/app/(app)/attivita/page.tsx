@@ -122,10 +122,10 @@ export default function AttivitaPage() {
         />
       </div>
 
-      <Tabs defaultValue="lista">
+      <Tabs defaultValue="bacheca">
         <TabsList>
-          <TabsTrigger value="lista">Lista</TabsTrigger>
           <TabsTrigger value="bacheca">Bacheca</TabsTrigger>
+          <TabsTrigger value="lista">Lista</TabsTrigger>
         </TabsList>
         <TabsContent value="lista" className="mt-4">
           <ActivityList
