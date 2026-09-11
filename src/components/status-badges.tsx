@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils"
 
 export function StatusBadge({ status }: { status: ActivityStatus }) {
   const styles: Record<ActivityStatus, string> = {
-    inbox: "border-sky-200 bg-sky-50 text-sky-800",
-    in_corso: "border-indigo-200 bg-indigo-50 text-indigo-800",
+    inbox: "border-blue-200 bg-blue-50 text-blue-800",
+    in_corso: "border-slate-200 bg-slate-50 text-slate-700",
     in_attesa: "border-amber-200 bg-amber-50 text-amber-900",
-    fatto: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    fatto: "border-green-200 bg-green-50 text-green-800",
   }
   return (
     <Badge variant="outline" className={cn("font-medium", styles[status])}>
@@ -21,8 +21,8 @@ export function StatusBadge({ status }: { status: ActivityStatus }) {
 
 export function TypeBadge({ type }: { type: ActivityType }) {
   const styles: Record<ActivityType, string> = {
-    eseguo: "border-slate-200 bg-slate-50 text-slate-700",
-    coordino: "border-orange-200 bg-orange-50 text-orange-900",
+    eseguo: "border-blue-200 bg-blue-50 text-blue-800",
+    coordino: "border-amber-200 bg-amber-50 text-amber-900",
   }
   return (
     <Badge variant="outline" className={cn("font-medium", styles[type])}>

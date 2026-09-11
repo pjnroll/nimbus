@@ -16,7 +16,7 @@ export function ProjectCard({
   openCount: number
 }) {
   const statusStyle: Record<Project["status"], string> = {
-    attivo: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    attivo: "border-green-200 bg-green-50 text-green-800",
     in_attesa: "border-amber-200 bg-amber-50 text-amber-900",
     chiuso: "border-zinc-200 bg-zinc-100 text-zinc-600",
   }
@@ -35,9 +35,9 @@ export function ProjectCard({
             {project.client || "Ambito non indicato"}
           </p>
         </div>
-        <div className="rounded-lg bg-sky-50 px-2.5 py-1.5 text-center">
-          <p className="text-lg font-semibold text-sky-900">{openCount}</p>
-          <p className="text-[10px] tracking-wide text-sky-800 uppercase">aperte</p>
+        <div className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-center">
+          <p className="text-lg font-semibold text-blue-900">{openCount}</p>
+          <p className="text-[10px] tracking-wide text-blue-800 uppercase">aperte</p>
         </div>
       </div>
       {project.notes ? (

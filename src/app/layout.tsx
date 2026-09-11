@@ -1,17 +1,11 @@
 import type { Metadata } from "next"
-import { Outfit, Source_Serif_4 } from "next/font/google"
+import { Plus_Jakarta_Sans } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
-})
-
-const serif = Source_Serif_4({
-  variable: "--font-serif",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
 })
 
 export const metadata: Metadata = {
@@ -24,7 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="it"
-      className={`${outfit.variable} ${serif.variable} h-full antialiased`}
+      className={`${jakarta.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

@@ -38,7 +38,7 @@ export function ActivityCard({
     <article
       className={cn(
         "group relative rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 transition-shadow hover:shadow-md",
-        activity.type === "coordino" ? "border-l-4 border-l-orange-400" : "border-l-4 border-l-sky-500",
+        activity.type === "coordino" ? "border-l-4 border-l-amber-400" : "border-l-4 border-l-blue-600",
       )}
     >
       <div className="flex items-start gap-3">
@@ -144,7 +144,7 @@ export function ActivityCard({
           href={activity.driveUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-sky-800 hover:underline"
+          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
         >
           Cartella o file Drive
           <ExternalLinkIcon className="size-3" />

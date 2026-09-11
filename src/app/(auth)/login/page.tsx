@@ -61,10 +61,10 @@ function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md shadow-md">
       <CardHeader>
         <div className="mb-2 flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-sky-100 text-sky-800">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <CloudIcon className="size-5" />
           </span>
           <p className="font-heading text-lg font-semibold">Nimbus</p>

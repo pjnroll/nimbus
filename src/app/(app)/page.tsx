@@ -108,10 +108,10 @@ export default function OggiPage() {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="In ritardo" value={groups.overdue.length} tone="danger" />
-        <Stat label="In corso" value={groups.inCorso.length} tone="warn" />
-        <Stat label="In attesa" value={groups.inAttesa.length} tone="neutral" />
+        <Stat label="In corso" value={groups.inCorso.length} tone="info" />
+        <Stat label="In attesa" value={groups.inAttesa.length} tone="warn" />
         <Stat label="Fatto" value={groups.fatto.length} tone="ok" />
-        <Stat label="Da smistare" value={inbox.length} tone="info" />
+        <Stat label="Da smistare" value={inbox.length} tone="inbox" />
       </section>
 
       {calm ? (
@@ -198,14 +198,15 @@ function Stat({
 }: {
   label: string
   value: number
-  tone: "danger" | "warn" | "info" | "neutral" | "ok"
+  tone: "danger" | "warn" | "info" | "neutral" | "ok" | "inbox"
 }) {
   const tones = {
     danger: "bg-red-50 text-red-900 ring-red-100",
     warn: "bg-amber-50 text-amber-950 ring-amber-100",
-    info: "bg-sky-50 text-sky-950 ring-sky-100",
+    info: "bg-blue-50 text-blue-950 ring-blue-100",
+    inbox: "bg-cyan-50 text-cyan-950 ring-cyan-100",
     neutral: "bg-card text-foreground ring-foreground/10",
-    ok: "bg-emerald-50 text-emerald-950 ring-emerald-100",
+    ok: "bg-green-50 text-green-950 ring-green-100",
   }
   return (
     <div className={`rounded-xl px-4 py-3 ring-1 ${tones[tone]}`}>

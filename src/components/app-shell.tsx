@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-full bg-background">
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
+      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm md:flex">
         <Brand />
         <Nav
           pathname={pathname}
@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <MenuIcon />
               <span className="sr-only">Apri menu</span>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
+            <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground shadow-sm">
               <SheetHeader className="sr-only">
                 <SheetTitle>Navigazione</SheetTitle>
               </SheetHeader>
@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-2 font-heading text-lg font-medium">
-            <CloudIcon className="size-5 text-sky-700" />
+            <CloudIcon className="size-5 text-primary" />
             Nimbus
           </div>
         </header>
@@ -91,16 +91,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function Brand() {
   return (
-    <div className="border-b border-white/10 px-5 py-5">
+    <div className="border-b border-sidebar-border px-5 py-5">
       <div className="flex items-center gap-2">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-sky-500/20 text-sky-200">
+        <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <CloudIcon className="size-5" />
         </span>
         <div>
           <p className="font-heading text-lg leading-none font-semibold tracking-tight">
             Nimbus
           </p>
-          <p className="mt-1 text-xs text-sidebar-foreground/70">
+          <p className="mt-1 text-xs text-muted-foreground">
             Laviano · Cloud PM
           </p>
         </div>
@@ -137,13 +137,13 @@ function Nav({
               "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               active
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/80 hover:bg-white/5 hover:text-sidebar-foreground",
+                : "text-sidebar-foreground/75 hover:bg-muted hover:text-sidebar-foreground",
             )}
           >
             <Icon className="size-4" />
             <span className="flex-1">{item.label}</span>
             {item.href === "/inbox" && hydrated && inboxCount > 0 ? (
-              <span className="rounded-full bg-sky-400/20 px-1.5 text-xs text-sky-100">
+              <span className="rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
                 {inboxCount}
               </span>
             ) : null}
@@ -186,9 +186,9 @@ function SidebarFooter() {
   }
 
   return (
-    <div className="mt-auto space-y-2 border-t border-white/10 px-3 py-3">
+    <div className="mt-auto space-y-2 border-t border-sidebar-border px-3 py-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate px-2 text-xs text-sidebar-foreground/70" title={email ?? undefined}>
+        <p className="min-w-0 truncate px-2 text-xs text-muted-foreground" title={email ?? undefined}>
           {email ?? "Dati salvati sul server"}
         </p>
         <DataMenu />
@@ -196,7 +196,7 @@ function SidebarFooter() {
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-start text-sidebar-foreground/80 hover:bg-white/5 hover:text-sidebar-foreground"
+        className="w-full justify-start"
         onClick={() => void logout()}
       >
         <LogOutIcon />
