@@ -22,6 +22,7 @@ import {
   newId,
   upsertPersonInStore,
 } from "@/lib/people"
+import { cloneProjectInStore } from "@/lib/projects"
 import { SEED_STORE } from "@/lib/seed"
 import {
   STORE_KEY,
@@ -38,6 +39,7 @@ type StoreContextValue = {
   addProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt">) => Project
   updateProject: (id: string, patch: Partial<Project>) => void
   deleteProject: (id: string) => void
+  cloneProject: (id: string) => Project | null
   addActivity: (
     activity: Omit<Activity, "id" | "createdAt" | "updatedAt">,
   ) => Activity
@@ -293,6 +295,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const cloneProject = useCallback((id: string) => {
+    const result = cloneProjectInStore(getSnapshot(), id)
+    if (!result.project) return null
+    writeStore(result.store)
+    return result.project
+  }, [])
+
   const deleteProject = useCallback((id: string) => {
     const current = getSnapshot()
     writeStore({
@@ -394,6 +403,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addProject,
       updateProject,
       deleteProject,
+      cloneProject,
       addActivity,
       updateActivity,
       deleteActivity,
@@ -408,6 +418,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addProject,
       updateProject,
       deleteProject,
+      cloneProject,
       addActivity,
       updateActivity,
       deleteActivity,

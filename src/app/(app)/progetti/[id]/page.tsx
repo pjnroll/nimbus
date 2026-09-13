@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { use, useEffect, useMemo, useState } from "react"
-import { ExternalLinkIcon } from "lucide-react"
+import { CopyIcon, ExternalLinkIcon } from "lucide-react"
 import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
@@ -25,7 +26,8 @@ export default function ProjectDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const { store, updateActivity, deleteActivity } = useNimbus()
+  const router = useRouter()
+  const { store, updateActivity, deleteActivity, cloneProject } = useNimbus()
   const project = store.projects.find((item) => item.id === id)
   const [editing, setEditing] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -126,6 +128,21 @@ export default function ProjectDetailPage({
               <ExternalLinkIcon data-icon="inline-end" />
             </Button>
           ) : null}
+          <Button
+            variant="outline"
+            onClick={() => {
+              const copy = cloneProject(project.id)
+              if (!copy) {
+                toast.error("Non riesco a clonare il progetto.")
+                return
+              }
+              toast.success("Progetto clonato. Cambia nome e Drive se serve.")
+              router.push(`/progetti/${copy.id}`)
+            }}
+          >
+            <CopyIcon data-icon="inline-start" />
+            Clona
+          </Button>
           <Button variant="outline" onClick={() => setEditing(true)}>
             Modifica
           </Button>

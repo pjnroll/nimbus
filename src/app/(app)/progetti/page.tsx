@@ -1,17 +1,49 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { FolderKanbanIcon } from "lucide-react"
+import { toast } from "sonner"
 import { EmptyState } from "@/components/empty-state"
-import { ProjectCard } from "@/components/project-card"
+import { ProjectRow } from "@/components/project-card"
 import { ProjectDialog } from "@/components/project-dialog"
 import { Button } from "@/components/ui/button"
+import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { projectOpenCount } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
+import type { ProjectStatus } from "@/lib/types"
+
+const GROUPS: { status: ProjectStatus; title: string }[] = [
+  { status: "attivo", title: "Attivi" },
+  { status: "in_attesa", title: PROJECT_STATUS_LABELS.in_attesa },
+  { status: "chiuso", title: "Chiusi" },
+]
 
 export default function ProgettiPage() {
-  const { store } = useNimbus()
+  const { store, cloneProject } = useNimbus()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
+
+  const groups = useMemo(
+    () =>
+      GROUPS.map((group) => ({
+        ...group,
+        projects: store.projects
+          .filter((project) => project.status === group.status)
+          .sort((a, b) => a.name.localeCompare(b.name, "it")),
+      })).filter((group) => group.projects.length > 0),
+    [store.projects],
+  )
+
+  function handleClone(id: string) {
+    const copy = cloneProject(id)
+    if (!copy) {
+      toast.error("Non riesco a clonare il progetto.")
+      return
+    }
+    toast.success("Progetto clonato. Cambia nome e Drive se serve.")
+    router.push(`/progetti/${copy.id}`)
+  }
 
   return (
     <div className="space-y-6">
@@ -21,8 +53,8 @@ export default function ProgettiPage() {
             Progetti
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Schede, non colonne. Ogni progetto ha le attività aperte e il link
-            alla cartella Drive che già usi.
+            Elenco per stato. Ogni progetto raggruppa le attività aperte e il
+            link Drive.
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>Nuovo progetto</Button>
@@ -36,13 +68,23 @@ export default function ProgettiPage() {
           <Button onClick={() => setOpen(true)}>Crea progetto</Button>
         </EmptyState>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {store.projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              openCount={projectOpenCount(store, project.id)}
-            />
+        <div className="space-y-6">
+          {groups.map((group) => (
+            <section key={group.status} className="space-y-2">
+              <h2 className="font-heading text-sm font-medium tracking-wide uppercase">
+                {group.title}
+              </h2>
+              <div className="divide-y divide-foreground/10 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+                {group.projects.map((project) => (
+                  <ProjectRow
+                    key={project.id}
+                    project={project}
+                    openCount={projectOpenCount(store, project.id)}
+                    onClone={handleClone}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
