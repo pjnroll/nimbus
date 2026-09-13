@@ -26,7 +26,7 @@ const RANGE_TABS: { id: HomeRange; label: string }[] = [
   { id: "oggi", label: "Oggi" },
   { id: "settimana", label: "Questa settimana" },
   { id: "7giorni", label: "Prossimi 7 giorni" },
-  { id: "mese", label: "Questo mese" },
+  { id: "sempre", label: "Sempre" },
 ]
 
 function headingForRange(range: HomeRange): string {
@@ -38,8 +38,8 @@ function headingForRange(range: HomeRange): string {
       return `${hello}. Questa è la settimana.`
     case "7giorni":
       return `${hello}. I prossimi sette giorni.`
-    case "mese":
-      return `${hello}. Questo è il mese.`
+    case "sempre":
+      return `${hello}. Tutto il lavoro.`
   }
 }
 

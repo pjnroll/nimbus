@@ -15,7 +15,7 @@ export function addDaysISO(days: number, from = new Date()): string {
   return toISODate(next)
 }
 
-export const HOME_RANGES = ["oggi", "settimana", "7giorni", "mese"] as const
+export const HOME_RANGES = ["oggi", "settimana", "7giorni", "sempre"] as const
 export type HomeRange = (typeof HOME_RANGES)[number]
 
 export function isHomeRange(value: string): value is HomeRange {
@@ -33,20 +33,10 @@ export function endOfWeekSunday(iso = todayISO()): string {
   return addDaysISO(6, parseISODate(startOfWeekMonday(iso)))
 }
 
-export function startOfMonth(iso = todayISO()): string {
-  const date = parseISODate(iso)
-  return toISODate(new Date(date.getFullYear(), date.getMonth(), 1))
-}
-
-export function endOfMonth(iso = todayISO()): string {
-  const date = parseISODate(iso)
-  return toISODate(new Date(date.getFullYear(), date.getMonth() + 1, 0))
-}
-
 export function homeRangeBounds(
   range: HomeRange,
   today = todayISO(),
-): { from: string; to: string } {
+): { from: string | null; to: string | null } {
   switch (range) {
     case "oggi":
       return { from: today, to: today }
@@ -54,12 +44,16 @@ export function homeRangeBounds(
       return { from: startOfWeekMonday(today), to: endOfWeekSunday(today) }
     case "7giorni":
       return { from: today, to: addDaysISO(6, parseISODate(today)) }
-    case "mese":
-      return { from: startOfMonth(today), to: endOfMonth(today) }
+    case "sempre":
+      return { from: null, to: null }
   }
 }
 
-export function formatRangeIT(from: string, to: string): string {
+export function formatRangeIT(
+  from: string | null,
+  to: string | null,
+): string {
+  if (!from || !to) return "Sempre"
   if (from === to) return formatLongDateIT(from)
   const start = parseISODate(from)
   const end = parseISODate(to)

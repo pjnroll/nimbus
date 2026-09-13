@@ -46,8 +46,8 @@ export function dueInRange(
 
 export function homePeriodGroups(
   activities: Activity[],
-  from: string,
-  to: string,
+  from: string | null,
+  to: string | null,
   today = todayISO(),
 ): {
   overdue: Activity[]
@@ -57,7 +57,10 @@ export function homePeriodGroups(
 } {
   const overdue = sortByDueThenPriority(overdueActivities(activities, today))
   const overdueIds = new Set(overdue.map((activity) => activity.id))
-  const inRange = dueInRange(activities, from, to)
+  const inRange =
+    from && to
+      ? dueInRange(activities, from, to)
+      : activities.filter((activity) => activity.status !== "inbox")
 
   return {
     overdue,
