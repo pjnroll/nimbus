@@ -134,7 +134,7 @@ function ProjectDialogForm({
   }
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>{project ? "Modifica progetto" : "Nuovo progetto"}</DialogTitle>
         <DialogDescription>
@@ -142,7 +142,7 @@ function ProjectDialogForm({
           senza sincronizzare Google.
         </DialogDescription>
       </DialogHeader>
-      <div className="grid max-h-[min(60vh,32rem)] gap-3 overflow-y-auto pr-1">
+      <div className="grid max-h-[min(70vh,42rem)] gap-5 overflow-y-auto pr-1">
         <div className="grid gap-1.5">
           <Label htmlFor="prj-name">Nome</Label>
           <Input

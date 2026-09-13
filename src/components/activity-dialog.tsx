@@ -180,7 +180,7 @@ function ActivityDialogForm({
   }
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>
           {heading ?? (activity ? "Modifica attività" : "Nuova attività")}
@@ -190,7 +190,7 @@ function ActivityDialogForm({
           Drive è facoltativo: incollalo a mano.
         </DialogDescription>
       </DialogHeader>
-      <div className="grid max-h-[min(60vh,32rem)] gap-3 overflow-y-auto pr-1">
+      <div className="grid max-h-[min(70vh,42rem)] gap-5 overflow-y-auto pr-1">
         <Field label="Titolo" htmlFor="act-title">
           <Input
             id="act-title"
