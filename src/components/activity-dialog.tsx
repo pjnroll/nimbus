@@ -251,10 +251,12 @@ function ActivityDialogForm({
             }}
             options={[
               { value: NONE_PROJECT, label: "Nessun progetto" },
-              ...store.projects.map((project) => ({
-                value: project.id,
-                label: project.name,
-              })),
+              ...[...store.projects]
+                .sort((a, b) => a.name.localeCompare(b.name, "it"))
+                .map((project) => ({
+                  value: project.id,
+                  label: project.name,
+                })),
             ]}
           />
         </Field>

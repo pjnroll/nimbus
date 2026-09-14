@@ -145,10 +145,12 @@ export default function AttivitaPage() {
           options={[
             { value: ALL, label: "Tutti i progetti" },
             { value: NONE_PROJECT, label: "Senza progetto" },
-            ...store.projects.map((project) => ({
-              value: project.id,
-              label: project.name,
-            })),
+            ...[...store.projects]
+              .sort((a, b) => a.name.localeCompare(b.name, "it"))
+              .map((project) => ({
+                value: project.id,
+                label: project.name,
+              })),
           ]}
         />
         {selectedProject ? (
