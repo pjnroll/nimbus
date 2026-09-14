@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
 import { CategoryField } from "@/components/category-field"
@@ -125,6 +126,7 @@ function ActivityDialogForm({
   heading?: string
   onOpenChange: (open: boolean) => void
 }) {
+  const router = useRouter()
   const { store, addActivity, updateActivity, deleteActivity, upsertPerson, upsertCategory } =
     useNimbus()
   const [form, setForm] = useState<FormState>(() =>
@@ -381,7 +383,18 @@ function ActivityDialogForm({
         ) : (
           <span />
         )}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {form.projectId !== NONE_PROJECT ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false)
+                router.push(`/progetti/${form.projectId}`)
+              }}
+            >
+              Vai al progetto
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>

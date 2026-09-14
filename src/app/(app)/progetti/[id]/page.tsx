@@ -55,7 +55,7 @@ export default function ProjectDetailPage({
   }, [store.activities, id])
 
   const openAll = openActivities(activities)
-  const open = openAll.filter((activity) => {
+  const visible = activities.filter((activity) => {
     if (categoryFilter === ALL) return true
     if (categoryFilter === NONE_CATEGORY) return !activity.categoryId
     return activity.categoryId === categoryFilter
@@ -152,7 +152,7 @@ export default function ProjectDetailPage({
 
       <section className="space-y-3">
         <div>
-          <h2 className="font-heading text-xl font-medium">Attività aperte</h2>
+          <h2 className="font-heading text-xl font-medium">Attività</h2>
           <p className="text-sm text-muted-foreground">
             {openAll.length === 1 ? "1 aperta" : `${openAll.length} aperte`} su{" "}
             {activities.length} totali.
@@ -190,7 +190,7 @@ export default function ProjectDetailPage({
           </div>
         ) : null}
         <ActivityList
-          activities={open}
+          activities={visible}
           projects={store.projects}
           showProjectName={false}
           onOpen={setSelected}
@@ -202,7 +202,7 @@ export default function ProjectDetailPage({
             deleteActivity(activityId)
             toast.success("Attività eliminata")
           }}
-          emptyTitle="Nessuna attività aperta"
+          emptyTitle="Nessuna attività"
           emptyDescription="Crea un’attività o smista qualcosa dall’inbox su questo progetto."
         />
       </section>
