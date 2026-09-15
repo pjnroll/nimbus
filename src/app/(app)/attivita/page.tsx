@@ -61,6 +61,7 @@ export default function AttivitaPage() {
       const haystack = [
         activity.title,
         activity.description,
+        activity.closingNote,
         activityPersonHaystack(store.people, activity),
         activityCategoryName(store, activity),
         project?.name ?? "",
@@ -79,8 +80,12 @@ export default function AttivitaPage() {
 
   const boardStatuses: ActivityStatus[] = ["in_corso", "in_attesa", "fatto"]
 
-  function onStatus(id: string, next: Activity["status"]) {
-    updateActivity(id, { status: next })
+  function onStatus(
+    id: string,
+    next: Activity["status"],
+    extra?: Partial<Activity>,
+  ) {
+    updateActivity(id, { status: next, ...extra })
     toast.success("Stato aggiornato")
   }
 

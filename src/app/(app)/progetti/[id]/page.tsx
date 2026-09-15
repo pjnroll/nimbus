@@ -194,8 +194,8 @@ export default function ProjectDetailPage({
           projects={store.projects}
           showProjectName={false}
           onOpen={setSelected}
-          onStatus={(activityId, status) => {
-            updateActivity(activityId, { status })
+          onStatus={(activityId, status, extra) => {
+            updateActivity(activityId, { status, ...extra })
             toast.success("Stato aggiornato")
           }}
           onDelete={(activityId) => {

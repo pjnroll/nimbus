@@ -47,6 +47,7 @@ type FormState = {
   assigneeIds: string[]
   waitingOnPersonId: string | null
   waitingReason: string
+  closingNote: string
   driveUrl: string
   categoryId: string | null
 }
@@ -64,6 +65,7 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   assigneeIds: [],
   waitingOnPersonId: null,
   waitingReason: "",
+  closingNote: "",
   driveUrl: "",
   categoryId: null,
   ...defaults,
@@ -83,6 +85,7 @@ function fromActivity(activity: Activity): FormState {
     assigneeIds: activity.assigneeIds,
     waitingOnPersonId: activity.waitingOnPersonId,
     waitingReason: activity.waitingReason,
+    closingNote: activity.closingNote,
     driveUrl: activity.driveUrl,
     categoryId: activity.categoryId,
   }
@@ -160,6 +163,7 @@ function ActivityDialogForm({
       assigneeIds: form.assigneeIds,
       waitingOnPersonId: form.waitingOnPersonId,
       waitingReason: form.waitingReason.trim(),
+      closingNote: form.closingNote.trim(),
       driveUrl: form.driveUrl.trim(),
       categoryId:
         form.projectId === NONE_PROJECT ? null : form.categoryId,
@@ -364,6 +368,16 @@ function ActivityDialogForm({
               />
             </Field>
           </div>
+        ) : null}
+        {form.status === "fatto" ? (
+          <Field label="Nota di chiusura" htmlFor="act-closing">
+            <Textarea
+              id="act-closing"
+              value={form.closingNote}
+              onChange={(event) => patch("closingNote", event.target.value)}
+              placeholder="Come si è chiusa, cosa è rimasto in Drive, chi ha sbloccato"
+            />
+          </Field>
         ) : null}
         <Field label="Link Drive" htmlFor="act-drive">
           <Input

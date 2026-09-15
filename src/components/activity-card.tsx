@@ -77,6 +77,11 @@ export function ActivityCard({
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
             {activity.description || "Nessuna nota. Apri per smistare o completare."}
           </p>
+          {activity.closingNote ? (
+            <p className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+              Chiusura: {activity.closingNote}
+            </p>
+          ) : null}
           <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <div>
               <dt className="sr-only">Origine</dt>

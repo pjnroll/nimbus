@@ -38,8 +38,8 @@ export default function InboxPage() {
         activities={items}
         projects={store.projects}
         onOpen={setSelected}
-        onStatus={(id, status) => {
-          updateActivity(id, { status })
+        onStatus={(id, status, extra) => {
+          updateActivity(id, { status, ...extra })
           toast.success("Stato aggiornato")
         }}
         onDelete={(id) => {

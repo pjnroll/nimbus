@@ -41,6 +41,7 @@ export type Activity = {
   assigneeIds: string[]
   waitingOnPersonId: string | null
   waitingReason: string
+  closingNote: string
   driveUrl: string
   categoryId: string | null
   createdAt: string

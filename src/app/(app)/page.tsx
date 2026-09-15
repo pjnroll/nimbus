@@ -59,8 +59,12 @@ export default function OggiPage() {
     [store.activities],
   )
 
-  function onStatus(id: string, status: Activity["status"]) {
-    updateActivity(id, { status })
+  function onStatus(
+    id: string,
+    status: Activity["status"],
+    extra?: Partial<Activity>,
+  ) {
+    updateActivity(id, { status, ...extra })
     toast.success("Stato aggiornato")
   }
 
@@ -232,7 +236,11 @@ function Section({
   activities: Activity[]
   projects: ReturnType<typeof useNimbus>["store"]["projects"]
   onOpen: (activity: Activity) => void
-  onStatus: (id: string, status: Activity["status"]) => void
+  onStatus: (
+    id: string,
+    status: Activity["status"],
+    extra?: Partial<Activity>,
+  ) => void
   onDelete: (id: string) => void
   emptyTitle: string
   emptyDescription: string

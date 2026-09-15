@@ -149,10 +149,15 @@ type LegacyProject = Omit<Project, "personIds" | "categories"> & {
 }
 type LegacyActivity = Omit<
   Activity,
-  "assigneeIds" | "requesterId" | "waitingOnPersonId" | "categoryId"
+  | "assigneeIds"
+  | "requesterId"
+  | "waitingOnPersonId"
+  | "categoryId"
+  | "closingNote"
 > & {
   requester?: unknown
   waitingOn?: unknown
+  closingNote?: unknown
 }
 
 export function migrateLegacyStore(value: unknown): NimbusStore {
@@ -188,6 +193,8 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
           ? upsertFromName(people, byKey, waitingOn)
           : null,
       categoryId: null,
+      closingNote:
+        typeof rest.closingNote === "string" ? rest.closingNote : "",
     }
   })
 
@@ -199,7 +206,10 @@ export function migrateV2Store(value: unknown): NimbusStore {
     people: NimbusStore["people"]
     projects: Array<Omit<Project, "categories"> & { categories?: unknown }>
     activities: Array<
-      Omit<Activity, "categoryId"> & { categoryId?: unknown }
+      Omit<Activity, "categoryId" | "closingNote"> & {
+        categoryId?: unknown
+        closingNote?: unknown
+      }
     >
   }
   return {
@@ -215,6 +225,8 @@ export function migrateV2Store(value: unknown): NimbusStore {
       ...activity,
       categoryId:
         typeof activity.categoryId === "string" ? activity.categoryId : null,
+      closingNote:
+        typeof activity.closingNote === "string" ? activity.closingNote : "",
     })),
   }
 }
@@ -231,6 +243,8 @@ function ensureCategories(store: NimbusStore): NimbusStore {
       ...activity,
       categoryId:
         typeof activity.categoryId === "string" ? activity.categoryId : null,
+      closingNote:
+        typeof activity.closingNote === "string" ? activity.closingNote : "",
     })),
   }
 }
