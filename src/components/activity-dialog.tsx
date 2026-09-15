@@ -5,18 +5,17 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
 import { CategoryField } from "@/components/category-field"
+import { FormField, FormSection } from "@/components/form-section"
 import { PersonField } from "@/components/person-field"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
   PRIORITY_LABELS,
@@ -90,6 +89,9 @@ function fromActivity(activity: Activity): FormState {
     categoryId: activity.categoryId,
   }
 }
+
+const heroInputClass =
+  "h-11 border-input/80 px-3 font-heading text-xl md:text-xl"
 
 export function ActivityDialog({
   open,
@@ -185,230 +187,225 @@ function ActivityDialogForm({
     onOpenChange(false)
   }
 
+  const projectPeople =
+    form.projectId === NONE_PROJECT
+      ? []
+      : (store.projects.find((project) => project.id === form.projectId)
+          ?.personIds ?? [])
+
   return (
-    <DialogContent className="sm:max-w-2xl">
-      <DialogHeader>
-        <DialogTitle>
+    <DialogContent size="lg">
+      <DialogHeader className="gap-3 pr-8">
+        <DialogTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {heading ?? (activity ? "Modifica attività" : "Nuova attività")}
         </DialogTitle>
-        <DialogDescription>
-          Distingui se la fai tu o se stai coordinando qualcun altro. Il link
-          Drive è facoltativo: incollalo a mano.
-        </DialogDescription>
+        <Input
+          id="act-title"
+          value={form.title}
+          onChange={(event) => patch("title", event.target.value)}
+          placeholder="Cosa ti hanno chiesto?"
+          className={heroInputClass}
+          aria-label="Titolo"
+        />
       </DialogHeader>
-      <div className="grid max-h-[min(70vh,42rem)] gap-5 overflow-y-auto pr-1">
-        <Field label="Titolo" htmlFor="act-title">
-          <Input
-            id="act-title"
-            value={form.title}
-            onChange={(event) => patch("title", event.target.value)}
-            placeholder="Cosa ti hanno chiesto?"
-          />
-        </Field>
-        <Field label="Note" htmlFor="act-desc">
-          <Textarea
-            id="act-desc"
-            value={form.description}
-            onChange={(event) => patch("description", event.target.value)}
-            placeholder="Contesto dalla mail o dalla chat"
-          />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Origine">
-            <AppSelect
-              value={form.source}
-              onChange={(value) => patch("source", value as ActivitySource)}
-              options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))}
+      <div className="grid max-h-[min(70vh,42rem)] gap-6 overflow-y-auto pr-1 md:grid-cols-2">
+        <FormSection title="Contesto">
+          <FormField label="Note" htmlFor="act-desc">
+            <Textarea
+              id="act-desc"
+              value={form.description}
+              onChange={(event) => patch("description", event.target.value)}
+              placeholder="Contesto dalla mail o dalla chat"
             />
-          </Field>
-          <Field label="Richiedente" htmlFor="act-req">
-            <PersonField
-              id="act-req"
-              people={store.people}
-              value={form.requesterId ? [form.requesterId] : []}
-              onChange={(ids) => patch("requesterId", ids[0] ?? null)}
-              onCreate={upsertPerson}
-              multiple={false}
-              placeholder="Chi te l'ha chiesto"
-            />
-          </Field>
-        </div>
-        <Field label="Progetto">
-          <AppSelect
-            value={form.projectId}
-            onChange={(value) => {
-              setForm((current) => {
-                const nextProject =
-                  value === NONE_PROJECT
-                    ? undefined
-                    : store.projects.find((project) => project.id === value)
-                const keep = nextProject?.categories.some(
-                  (category) => category.id === current.categoryId,
-                )
-                return {
-                  ...current,
-                  projectId: value,
-                  categoryId: keep ? current.categoryId : null,
-                }
-              })
-            }}
-            options={[
-              { value: NONE_PROJECT, label: "Nessun progetto" },
-              ...[...store.projects]
-                .sort((a, b) => a.name.localeCompare(b.name, "it"))
-                .map((project) => ({
-                  value: project.id,
-                  label: project.name,
-                })),
-            ]}
-          />
-        </Field>
-        {form.projectId !== NONE_PROJECT ? (
-          <Field label="Categoria" htmlFor="act-category">
-            <CategoryField
-              id="act-category"
-              categories={
-                store.projects.find((project) => project.id === form.projectId)
-                  ?.categories ?? []
-              }
-              value={form.categoryId ? [form.categoryId] : []}
-              onChange={(ids) => patch("categoryId", ids[0] ?? null)}
-              onCreate={(name) => upsertCategory(form.projectId, name)}
-              multiple={false}
-              placeholder="Applicativo, infrastruttura, documentazione"
-            />
-          </Field>
-        ) : null}
-        <Field label="Svolta da" htmlFor="act-assignees">
-          <PersonField
-            id="act-assignees"
-            people={store.people}
-            value={form.assigneeIds}
-            onChange={(assigneeIds) => patch("assigneeIds", assigneeIds)}
-            onCreate={upsertPerson}
-            suggestIds={
-              form.projectId === NONE_PROJECT
-                ? []
-                : (store.projects.find((project) => project.id === form.projectId)
-                    ?.personIds ?? [])
-            }
-            placeholder="Chi deve svolgere l’attività"
-          />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Tipo">
-            <AppSelect
-              value={form.type}
-              onChange={(value) => patch("type", value as ActivityType)}
-              options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))}
-            />
-          </Field>
-          <Field label="Stato">
-            <AppSelect
-              value={form.status}
-              onChange={(value) => patch("status", value as ActivityStatus)}
-              options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))}
-            />
-          </Field>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Priorità">
-            <AppSelect
-              value={form.priority}
-              onChange={(value) => patch("priority", value as Priority)}
-              options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))}
-            />
-          </Field>
-          <Field label="Scadenza" htmlFor="act-due">
-            <Input
-              id="act-due"
-              type="date"
-              value={form.dueDate}
-              onChange={(event) => patch("dueDate", event.target.value)}
-            />
-          </Field>
-        </div>
-        {form.type === "coordino" || form.status === "in_attesa" ? (
-          <div className="grid gap-3 rounded-lg bg-amber-50 p-3 sm:grid-cols-2">
-            <Field label="In attesa di" htmlFor="act-wait">
+          </FormField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="Origine">
+              <AppSelect
+                value={form.source}
+                onChange={(value) => patch("source", value as ActivitySource)}
+                options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
+              />
+            </FormField>
+            <FormField label="Richiedente" htmlFor="act-req">
               <PersonField
-                id="act-wait"
+                id="act-req"
                 people={store.people}
-                value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
-                onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
+                value={form.requesterId ? [form.requesterId] : []}
+                onChange={(ids) => patch("requesterId", ids[0] ?? null)}
                 onCreate={upsertPerson}
                 multiple={false}
-                suggestIds={
-                  form.projectId === NONE_PROJECT
-                    ? []
-                    : (store.projects.find((project) => project.id === form.projectId)
-                        ?.personIds ?? [])
-                }
-                placeholder="Nome o team"
+                placeholder="Chi te l'ha chiesto"
               />
-            </Field>
-            <Field label="Perché è fermo" htmlFor="act-reason">
-              <Input
-                id="act-reason"
-                value={form.waitingReason}
-                onChange={(event) => patch("waitingReason", event.target.value)}
-                placeholder="Cosa manca"
-              />
-            </Field>
+            </FormField>
           </div>
-        ) : null}
-        {form.status === "fatto" ? (
-          <Field label="Nota di chiusura" htmlFor="act-closing">
-            <Textarea
-              id="act-closing"
-              value={form.closingNote}
-              onChange={(event) => patch("closingNote", event.target.value)}
-              placeholder="Come si è chiusa, cosa è rimasto in Drive, chi ha sbloccato"
+          <FormField label="Link Drive" htmlFor="act-drive">
+            <Input
+              id="act-drive"
+              value={form.driveUrl}
+              onChange={(event) => patch("driveUrl", event.target.value)}
+              placeholder="https://drive.google.com/..."
             />
-          </Field>
-        ) : null}
-        <Field label="Link Drive" htmlFor="act-drive">
-          <Input
-            id="act-drive"
-            value={form.driveUrl}
-            onChange={(event) => patch("driveUrl", event.target.value)}
-            placeholder="https://drive.google.com/..."
-          />
-        </Field>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          </FormField>
+        </FormSection>
+        <FormSection title="Piano">
+          <FormField label="Progetto">
+            <div className="grid gap-1.5">
+              <AppSelect
+                value={form.projectId}
+                onChange={(value) => {
+                  setForm((current) => {
+                    const nextProject =
+                      value === NONE_PROJECT
+                        ? undefined
+                        : store.projects.find((project) => project.id === value)
+                    const keep = nextProject?.categories.some(
+                      (category) => category.id === current.categoryId,
+                    )
+                    return {
+                      ...current,
+                      projectId: value,
+                      categoryId: keep ? current.categoryId : null,
+                    }
+                  })
+                }}
+                options={[
+                  { value: NONE_PROJECT, label: "Nessun progetto" },
+                  ...[...store.projects]
+                    .sort((a, b) => a.name.localeCompare(b.name, "it"))
+                    .map((project) => ({
+                      value: project.id,
+                      label: project.name,
+                    })),
+                ]}
+              />
+              {form.projectId !== NONE_PROJECT ? (
+                <button
+                  type="button"
+                  className="w-fit text-xs font-medium text-primary underline-offset-4 hover:underline"
+                  onClick={() => {
+                    onOpenChange(false)
+                    router.push(`/progetti/${form.projectId}`)
+                  }}
+                >
+                  Vai al progetto
+                </button>
+              ) : null}
+            </div>
+          </FormField>
+          {form.projectId !== NONE_PROJECT ? (
+            <FormField label="Categoria" htmlFor="act-category">
+              <CategoryField
+                id="act-category"
+                categories={
+                  store.projects.find((project) => project.id === form.projectId)
+                    ?.categories ?? []
+                }
+                value={form.categoryId ? [form.categoryId] : []}
+                onChange={(ids) => patch("categoryId", ids[0] ?? null)}
+                onCreate={(name) => upsertCategory(form.projectId, name)}
+                multiple={false}
+                placeholder="Applicativo, infrastruttura, documentazione"
+              />
+            </FormField>
+          ) : null}
+          <FormField label="Svolta da" htmlFor="act-assignees">
+            <PersonField
+              id="act-assignees"
+              people={store.people}
+              value={form.assigneeIds}
+              onChange={(assigneeIds) => patch("assigneeIds", assigneeIds)}
+              onCreate={upsertPerson}
+              suggestIds={projectPeople}
+              placeholder="Chi deve svolgere l’attività"
+            />
+          </FormField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="Tipo">
+              <AppSelect
+                value={form.type}
+                onChange={(value) => patch("type", value as ActivityType)}
+                options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
+              />
+            </FormField>
+            <FormField label="Stato">
+              <AppSelect
+                value={form.status}
+                onChange={(value) => patch("status", value as ActivityStatus)}
+                options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
+              />
+            </FormField>
+            <FormField label="Priorità">
+              <AppSelect
+                value={form.priority}
+                onChange={(value) => patch("priority", value as Priority)}
+                options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
+              />
+            </FormField>
+            <FormField label="Scadenza" htmlFor="act-due">
+              <Input
+                id="act-due"
+                type="date"
+                value={form.dueDate}
+                onChange={(event) => patch("dueDate", event.target.value)}
+              />
+            </FormField>
+          </div>
+          {form.type === "coordino" || form.status === "in_attesa" ? (
+            <div className="grid gap-3 rounded-lg bg-amber-50 p-3 sm:grid-cols-2">
+              <FormField label="In attesa di" htmlFor="act-wait">
+                <PersonField
+                  id="act-wait"
+                  people={store.people}
+                  value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
+                  onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
+                  onCreate={upsertPerson}
+                  multiple={false}
+                  suggestIds={projectPeople}
+                  placeholder="Nome o team"
+                />
+              </FormField>
+              <FormField label="Perché è fermo" htmlFor="act-reason">
+                <Input
+                  id="act-reason"
+                  value={form.waitingReason}
+                  onChange={(event) => patch("waitingReason", event.target.value)}
+                  placeholder="Cosa manca"
+                />
+              </FormField>
+            </div>
+          ) : null}
+          {form.status === "fatto" ? (
+            <FormField label="Nota di chiusura" htmlFor="act-closing">
+              <Textarea
+                id="act-closing"
+                value={form.closingNote}
+                onChange={(event) => patch("closingNote", event.target.value)}
+                placeholder="Come si è chiusa, cosa è rimasto in Drive, chi ha sbloccato"
+              />
+            </FormField>
+          ) : null}
+        </FormSection>
       </div>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <DialogFooter className={activity ? "sm:justify-between" : undefined}>
         {activity ? (
-          <Button variant="destructive" onClick={remove}>
+          <Button variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={remove}>
             Elimina
           </Button>
-        ) : (
-          <span />
-        )}
+        ) : null}
         <div className="flex flex-wrap gap-2">
-          {form.projectId !== NONE_PROJECT ? (
-            <Button
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false)
-                router.push(`/progetti/${form.projectId}`)
-              }}
-            >
-              Vai al progetto
-            </Button>
-          ) : null}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
@@ -416,22 +413,5 @@ function ActivityDialogForm({
         </div>
       </DialogFooter>
     </DialogContent>
-  )
-}
-
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string
-  htmlFor?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="grid gap-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-    </div>
   )
 }

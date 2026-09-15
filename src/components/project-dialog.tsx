@@ -3,20 +3,19 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
+import { CategoryField } from "@/components/category-field"
+import { FormField, FormSection } from "@/components/form-section"
+import { PersonField } from "@/components/person-field"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { CategoryField } from "@/components/category-field"
-import { PersonField } from "@/components/person-field"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { cleanCategoryName, findCategoryByName } from "@/lib/categories"
 import { newId } from "@/lib/people"
@@ -56,6 +55,9 @@ function fromProject(project: Project): FormState {
     notes: project.notes,
   }
 }
+
+const heroInputClass =
+  "h-11 border-input/80 px-3 font-heading text-xl md:text-xl"
 
 export function ProjectDialog({
   open,
@@ -134,124 +136,121 @@ function ProjectDialogForm({
   }
 
   return (
-    <DialogContent className="sm:max-w-2xl">
-      <DialogHeader>
-        <DialogTitle>{project ? "Modifica progetto" : "Nuovo progetto"}</DialogTitle>
-        <DialogDescription>
-          Un progetto raggruppa le attività e tiene il link alla cartella Drive,
-          senza sincronizzare Google.
-        </DialogDescription>
+    <DialogContent size="lg">
+      <DialogHeader className="gap-3 pr-8">
+        <DialogTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          {project ? "Modifica progetto" : "Nuovo progetto"}
+        </DialogTitle>
+        <Input
+          id="prj-name"
+          value={form.name}
+          onChange={(event) => setForm({ ...form, name: event.target.value })}
+          placeholder="Es. Cloud AWS · Piattaforma Tributi"
+          className={heroInputClass}
+          aria-label="Nome"
+        />
       </DialogHeader>
-      <div className="grid max-h-[min(70vh,42rem)] gap-5 overflow-y-auto pr-1">
-        <div className="grid gap-1.5">
-          <Label htmlFor="prj-name">Nome</Label>
-          <Input
-            id="prj-name"
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            placeholder="Es. Cloud AWS · Piattaforma Tributi"
-          />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label htmlFor="prj-client">Cliente / ambito</Label>
-            <Input
-              id="prj-client"
-              value={form.client}
-              onChange={(event) =>
-                setForm({ ...form, client: event.target.value })
-              }
-              placeholder="Area, ente, pratica"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Stato</Label>
-            <AppSelect
-              value={form.status}
-              onChange={(value) =>
-                setForm({ ...form, status: value as ProjectStatus })
-              }
-              options={Object.entries(PROJECT_STATUS_LABELS).map(
-                ([value, label]) => ({ value, label }),
-              )}
-            />
-          </div>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="prj-drive">Cartella Drive</Label>
-          <Input
-            id="prj-drive"
-            value={form.driveUrl}
-            onChange={(event) =>
-              setForm({ ...form, driveUrl: event.target.value })
-            }
-            placeholder="https://drive.google.com/drive/folders/..."
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="prj-people">Persone coinvolte</Label>
-          <PersonField
-            id="prj-people"
-            people={store.people}
-            value={form.personIds}
-            onChange={(personIds) => setForm({ ...form, personIds })}
-            onCreate={upsertPerson}
-            placeholder="Nome, poi Invio per aggiungere"
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="prj-categories">Categorie</Label>
-          <CategoryField
-            id="prj-categories"
-            categories={form.categories}
-            value={form.categories.map((category) => category.id)}
-            onChange={(ids) =>
-              setForm((current) => ({
-                ...current,
-                categories: ids
-                  .map((id) =>
-                    current.categories.find((category) => category.id === id),
-                  )
-                  .filter((category): category is Category => Boolean(category)),
-              }))
-            }
-            onCreate={(name) => {
-              const cleaned = cleanCategoryName(name)
-              if (!cleaned) return null
-              const existing = findCategoryByName(form.categories, cleaned)
-              if (existing) return existing
-              const created: Category = { id: newId(), name: cleaned }
-              setForm((current) => {
-                if (findCategoryByName(current.categories, cleaned)) return current
-                return {
-                  ...current,
-                  categories: [...current.categories, created],
+      <div className="grid max-h-[min(70vh,42rem)] gap-6 overflow-y-auto pr-1 md:grid-cols-2">
+        <FormSection title="Scheda">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="Cliente / ambito" htmlFor="prj-client">
+              <Input
+                id="prj-client"
+                value={form.client}
+                onChange={(event) =>
+                  setForm({ ...form, client: event.target.value })
                 }
-              })
-              return created
-            }}
-            placeholder="Applicativo, Infrastruttura, Documentazione"
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="prj-notes">Note</Label>
-          <Textarea
-            id="prj-notes"
-            value={form.notes}
-            onChange={(event) => setForm({ ...form, notes: event.target.value })}
-            placeholder="Contesto che nel foglio finiva in una colonna infinita"
-          />
-        </div>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                placeholder="Area, ente, pratica"
+              />
+            </FormField>
+            <FormField label="Stato">
+              <AppSelect
+                value={form.status}
+                onChange={(value) =>
+                  setForm({ ...form, status: value as ProjectStatus })
+                }
+                options={Object.entries(PROJECT_STATUS_LABELS).map(
+                  ([value, label]) => ({ value, label }),
+                )}
+              />
+            </FormField>
+          </div>
+          <FormField label="Cartella Drive" htmlFor="prj-drive">
+            <Input
+              id="prj-drive"
+              value={form.driveUrl}
+              onChange={(event) =>
+                setForm({ ...form, driveUrl: event.target.value })
+              }
+              placeholder="https://drive.google.com/drive/folders/..."
+            />
+          </FormField>
+          <FormField label="Note" htmlFor="prj-notes">
+            <Textarea
+              id="prj-notes"
+              value={form.notes}
+              onChange={(event) => setForm({ ...form, notes: event.target.value })}
+              placeholder="Contesto che nel foglio finiva in una colonna infinita"
+            />
+          </FormField>
+        </FormSection>
+        <FormSection title="Squadra">
+          <FormField label="Persone coinvolte" htmlFor="prj-people">
+            <PersonField
+              id="prj-people"
+              people={store.people}
+              value={form.personIds}
+              onChange={(personIds) => setForm({ ...form, personIds })}
+              onCreate={upsertPerson}
+              placeholder="Nome, poi Invio per aggiungere"
+            />
+          </FormField>
+          <FormField label="Categorie" htmlFor="prj-categories">
+            <CategoryField
+              id="prj-categories"
+              categories={form.categories}
+              value={form.categories.map((category) => category.id)}
+              onChange={(ids) =>
+                setForm((current) => ({
+                  ...current,
+                  categories: ids
+                    .map((id) =>
+                      current.categories.find((category) => category.id === id),
+                    )
+                    .filter((category): category is Category => Boolean(category)),
+                }))
+              }
+              onCreate={(name) => {
+                const cleaned = cleanCategoryName(name)
+                if (!cleaned) return null
+                const existing = findCategoryByName(form.categories, cleaned)
+                if (existing) return existing
+                const created: Category = { id: newId(), name: cleaned }
+                setForm((current) => {
+                  if (findCategoryByName(current.categories, cleaned)) return current
+                  return {
+                    ...current,
+                    categories: [...current.categories, created],
+                  }
+                })
+                return created
+              }}
+              placeholder="Applicativo, Infrastruttura, Documentazione"
+            />
+          </FormField>
+        </FormSection>
       </div>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <DialogFooter className={project ? "sm:justify-between" : undefined}>
         {project ? (
-          <Button variant="destructive" onClick={remove}>
+          <Button
+            variant="ghost"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={remove}
+          >
             Elimina
           </Button>
-        ) : (
-          <span />
-        )}
+        ) : null}
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annulla

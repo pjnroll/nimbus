@@ -51,10 +51,14 @@ function CloseActivityForm({
 
   return (
     <DialogContent>
-      <DialogHeader>
+      <DialogHeader className="gap-3 pr-8">
         <DialogTitle>Segna fatto</DialogTitle>
+        <p className="font-heading text-base leading-snug font-medium">
+          {activity.title}
+        </p>
         <DialogDescription>
-          {`${activity.title}. La nota di chiusura è facoltativa: serve a te per ricordare come è andata a finire.`}
+          La nota di chiusura è facoltativa: serve a te per ricordare come è
+          andata a finire.
         </DialogDescription>
       </DialogHeader>
       <div className="grid gap-1.5">
