@@ -43,11 +43,13 @@ export function PersonField({
 
   const matches = useMemo(() => {
     const needle = personNameKey(query)
-    return people.filter((person) => {
-      if (selectedIds.has(person.id)) return false
-      if (!needle) return true
-      return personNameKey(person.name).includes(needle)
-    })
+    return people
+      .filter((person) => {
+        if (selectedIds.has(person.id)) return false
+        if (!needle) return true
+        return personNameKey(person.name).includes(needle)
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, "it"))
   }, [people, query, selectedIds])
 
   const canCreate = useMemo(() => {
@@ -61,7 +63,8 @@ export function PersonField({
       suggestIds
         .filter((personId) => !selectedIds.has(personId))
         .map((personId) => people.find((person) => person.id === personId))
-        .filter((person): person is Person => Boolean(person)),
+        .filter((person): person is Person => Boolean(person))
+        .sort((a, b) => a.name.localeCompare(b.name, "it")),
     [people, selectedIds, suggestIds],
   )
 
