@@ -42,6 +42,7 @@ export function cloneProjectInStore(
       categoryId: activity.categoryId
         ? (categoryMap.get(activity.categoryId) ?? null)
         : null,
+      attachments: [],
       createdAt: stamp,
       updatedAt: stamp,
     }))

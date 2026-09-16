@@ -45,6 +45,11 @@ type StoreContextValue = {
   ) => Activity
   updateActivity: (id: string, patch: Partial<Activity>) => void
   deleteActivity: (id: string) => void
+  uploadActivityFiles: (activityId: string, files: File[]) => Promise<void>
+  removeActivityAttachment: (
+    activityId: string,
+    attachmentId: string,
+  ) => Promise<void>
   upsertPerson: (name: string) => Person | null
   upsertCategory: (projectId: string, name: string) => Category | null
   replaceStore: (next: NimbusStore) => void
@@ -147,9 +152,9 @@ async function putStore(next: NimbusStore): Promise<void> {
   }
 }
 
-function persist(next: NimbusStore) {
+function persist() {
   persistChain = persistChain
-    .then(() => putStore(next))
+    .then(() => putStore(getSnapshot()))
     .catch(() => {
       toast.error("Non riesco a salvare i dati sul server.")
     })
@@ -159,7 +164,12 @@ function writeStore(next: NimbusStore) {
   dirty = true
   memory = next
   emit()
-  persist(next)
+  persist()
+}
+
+function applyRemoteStore(next: NimbusStore) {
+  memory = next
+  emit()
 }
 
 function parseStoreResponse(value: unknown): {
@@ -209,7 +219,7 @@ async function hydrateFromServer(): Promise<void> {
       memory = next
       emit()
     } else {
-      persist(memory)
+      persist()
     }
   } catch {
     if (!dirty) {
@@ -370,7 +380,64 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...current,
       activities: current.activities.filter((activity) => activity.id !== id),
     })
+    void fetch(`/api/activities/${encodeURIComponent(id)}/attachments`, {
+      method: "DELETE",
+    })
   }, [])
+
+  const uploadActivityFiles = useCallback(
+    async (activityId: string, files: File[]) => {
+      if (files.length === 0) return
+      const body = new FormData()
+      for (const file of files) body.append("file", file)
+      const response = await fetch(
+        `/api/activities/${encodeURIComponent(activityId)}/attachments`,
+        { method: "POST", body },
+      )
+      if (response.status === 401) {
+        resetClientStore()
+        window.location.assign(new URL("/login", window.location.origin).href)
+        throw new Error("upload-failed")
+      }
+      const payload: unknown = await response.json().catch(() => null)
+      if (!response.ok) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Non riesco a caricare il file"
+        throw new Error(message)
+      }
+      const parsed = parseStoreResponse(payload)
+      if (!parsed) throw new Error("Non riesco a caricare il file")
+      applyRemoteStore(parsed.store)
+    },
+    [],
+  )
+
+  const removeActivityAttachment = useCallback(
+    async (activityId: string, attachmentId: string) => {
+      const response = await fetch(
+        `/api/activities/${encodeURIComponent(activityId)}/attachments/${encodeURIComponent(attachmentId)}`,
+        { method: "DELETE" },
+      )
+      if (response.status === 401) {
+        resetClientStore()
+        window.location.assign(new URL("/login", window.location.origin).href)
+        throw new Error("delete-failed")
+      }
+      const payload: unknown = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error("Non riesco a eliminare l’allegato")
+      }
+      const parsed = parseStoreResponse(payload)
+      if (!parsed) throw new Error("Non riesco a eliminare l’allegato")
+      applyRemoteStore(parsed.store)
+    },
+    [],
+  )
 
   const upsertPerson = useCallback((name: string) => {
     const result = upsertPersonInStore(getSnapshot(), name)
@@ -407,6 +474,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addActivity,
       updateActivity,
       deleteActivity,
+      uploadActivityFiles,
+      removeActivityAttachment,
       upsertPerson,
       upsertCategory,
       replaceStore,
@@ -422,6 +491,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addActivity,
       updateActivity,
       deleteActivity,
+      uploadActivityFiles,
+      removeActivityAttachment,
       upsertPerson,
       upsertCategory,
       replaceStore,

@@ -88,6 +88,9 @@ Directory di default: `data/` (fuori da git).
 
 - `data/users.json` — account (`id`, email, `googleSub`)
 - `data/stores/<userId>.json` — scrivania di ciascun utente
+- `data/files/<userId>/<activityId>/` — binari degli allegati delle attività
+
+L’export JSON include solo i metadati degli allegati (nome, dimensione), non i file.
 
 Per un volume k3s / Cloud Run:
 

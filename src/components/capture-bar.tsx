@@ -35,6 +35,7 @@ export function CaptureBar() {
       waitingOnPersonId: null,
       waitingReason: "",
       closingNote: "",
+      attachments: [],
       driveUrl: "",
       categoryId: null,
     })

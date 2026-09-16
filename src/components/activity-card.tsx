@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { ExternalLinkIcon, MoreHorizontalIcon } from "lucide-react"
+import { ExternalLinkIcon, MoreHorizontalIcon, PaperclipIcon } from "lucide-react"
+import { ActivityAttachmentLinks } from "@/components/activity-attachments"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -164,6 +165,18 @@ export function ActivityCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {activity.attachments.length > 0 ? (
+        <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+          <PaperclipIcon className="size-3" />
+          {activity.attachments.length === 1
+            ? "1 allegato"
+            : `${activity.attachments.length} allegati`}
+        </p>
+      ) : null}
+      <ActivityAttachmentLinks
+        activityId={activity.id}
+        attachments={activity.attachments}
+      />
       {activity.driveUrl ? (
         <Link
           href={activity.driveUrl}

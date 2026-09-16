@@ -27,6 +27,14 @@ export type Project = {
   updatedAt: string
 }
 
+export type ActivityAttachment = {
+  id: string
+  name: string
+  size: number
+  mimeType: string
+  createdAt: string
+}
+
 export type Activity = {
   id: string
   title: string
@@ -43,6 +51,7 @@ export type Activity = {
   waitingReason: string
   closingNote: string
   driveUrl: string
+  attachments: ActivityAttachment[]
   categoryId: string | null
   createdAt: string
   updatedAt: string

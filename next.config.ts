@@ -27,6 +27,9 @@ function localDevOrigins(): string[] {
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: localDevOrigins(),
+  experimental: {
+    proxyClientMaxBodySize: "25mb",
+  },
 }
 
 export default nextConfig

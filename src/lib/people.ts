@@ -195,6 +195,7 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
       categoryId: null,
       closingNote:
         typeof rest.closingNote === "string" ? rest.closingNote : "",
+      attachments: [],
     }
   })
 
@@ -206,9 +207,10 @@ export function migrateV2Store(value: unknown): NimbusStore {
     people: NimbusStore["people"]
     projects: Array<Omit<Project, "categories"> & { categories?: unknown }>
     activities: Array<
-      Omit<Activity, "categoryId" | "closingNote"> & {
+      Omit<Activity, "categoryId" | "closingNote" | "attachments"> & {
         categoryId?: unknown
         closingNote?: unknown
+        attachments?: unknown
       }
     >
   }
@@ -227,8 +229,41 @@ export function migrateV2Store(value: unknown): NimbusStore {
         typeof activity.categoryId === "string" ? activity.categoryId : null,
       closingNote:
         typeof activity.closingNote === "string" ? activity.closingNote : "",
+      attachments: coerceAttachments(activity.attachments),
     })),
   }
+}
+
+function coerceAttachments(value: unknown): Activity["attachments"] {
+  if (!Array.isArray(value)) return []
+  const attachments: Activity["attachments"] = []
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue
+    const candidate = item as {
+      id?: unknown
+      name?: unknown
+      size?: unknown
+      mimeType?: unknown
+      createdAt?: unknown
+    }
+    if (typeof candidate.id !== "string" || !candidate.id) continue
+    if (typeof candidate.name !== "string" || !candidate.name) continue
+    if (typeof candidate.size !== "number" || !Number.isFinite(candidate.size)) {
+      continue
+    }
+    if (typeof candidate.createdAt !== "string") continue
+    attachments.push({
+      id: candidate.id,
+      name: candidate.name,
+      size: candidate.size,
+      mimeType:
+        typeof candidate.mimeType === "string" && candidate.mimeType
+          ? candidate.mimeType
+          : "application/octet-stream",
+      createdAt: candidate.createdAt,
+    })
+  }
+  return attachments
 }
 
 function ensureCategories(store: NimbusStore): NimbusStore {
@@ -245,6 +280,7 @@ function ensureCategories(store: NimbusStore): NimbusStore {
         typeof activity.categoryId === "string" ? activity.categoryId : null,
       closingNote:
         typeof activity.closingNote === "string" ? activity.closingNote : "",
+      attachments: coerceAttachments(activity.attachments),
     })),
   }
 }

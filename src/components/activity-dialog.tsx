@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
+import { ActivityAttachmentsField } from "@/components/activity-attachments"
 import { CategoryField } from "@/components/category-field"
 import { FormField, FormSection } from "@/components/form-section"
 import { PersonField } from "@/components/person-field"
@@ -132,18 +133,20 @@ function ActivityDialogForm({
   onOpenChange: (open: boolean) => void
 }) {
   const router = useRouter()
-  const { store, addActivity, updateActivity, deleteActivity, upsertPerson, upsertCategory } =
+  const { store, addActivity, updateActivity, deleteActivity, uploadActivityFiles, removeActivityAttachment, upsertPerson, upsertCategory } =
     useNimbus()
   const [form, setForm] = useState<FormState>(() =>
     activity ? fromActivity(activity) : emptyForm(defaults),
   )
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
   }
 
-  function save() {
+  async function save() {
     if (!form.title.trim()) {
       setError("Serve un titolo, anche breve.")
       return
@@ -170,14 +173,30 @@ function ActivityDialogForm({
       categoryId:
         form.projectId === NONE_PROJECT ? null : form.categoryId,
     }
-    if (activity) {
-      updateActivity(activity.id, payload)
-      toast.success("Attività aggiornata")
-    } else {
-      addActivity(payload)
+    setBusy(true)
+    try {
+      if (activity) {
+        updateActivity(activity.id, payload)
+        toast.success("Attività aggiornata")
+        onOpenChange(false)
+        return
+      }
+      const created = addActivity({ ...payload, attachments: [] })
+      if (pendingFiles.length > 0) {
+        await uploadActivityFiles(created.id, pendingFiles)
+      }
       toast.success("Attività creata")
+      onOpenChange(false)
+    } catch (uploadError) {
+      toast.error(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Attività salvata, ma i file non sono partiti",
+      )
+      onOpenChange(false)
+    } finally {
+      setBusy(false)
     }
-    onOpenChange(false)
   }
 
   function remove() {
@@ -192,6 +211,10 @@ function ActivityDialogForm({
       ? []
       : (store.projects.find((project) => project.id === form.projectId)
           ?.personIds ?? [])
+  const savedAttachments = activity
+    ? (store.activities.find((item) => item.id === activity.id)?.attachments ??
+      activity.attachments)
+    : []
 
   return (
     <DialogContent size="lg">
@@ -247,6 +270,26 @@ function ActivityDialogForm({
               value={form.driveUrl}
               onChange={(event) => patch("driveUrl", event.target.value)}
               placeholder="https://drive.google.com/..."
+            />
+          </FormField>
+          <FormField label="Allegati" htmlFor="act-files">
+            <ActivityAttachmentsField
+              activityId={activity?.id}
+              attachments={savedAttachments}
+              pendingFiles={pendingFiles}
+              onPendingFiles={setPendingFiles}
+              onUpload={
+                activity
+                  ? (files) => uploadActivityFiles(activity.id, files)
+                  : undefined
+              }
+              onRemove={
+                activity
+                  ? (attachmentId) =>
+                      removeActivityAttachment(activity.id, attachmentId)
+                  : undefined
+              }
+              disabled={busy}
             />
           </FormField>
         </FormSection>
@@ -406,10 +449,12 @@ function ActivityDialogForm({
           </Button>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             Annulla
           </Button>
-          <Button onClick={save}>Salva</Button>
+          <Button onClick={() => void save()} disabled={busy}>
+            {busy ? "Salvataggio…" : "Salva"}
+          </Button>
         </div>
       </DialogFooter>
     </DialogContent>
