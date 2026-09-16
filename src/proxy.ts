@@ -4,10 +4,13 @@ import { readSessionToken, SESSION_COOKIE } from "@/lib/auth/token"
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  if (pathname === "/register" || pathname.startsWith("/register/")) {
+    return NextResponse.redirect(new URL("/login", request.url))
+  }
+
   const isPublic =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register") ||
-    pathname.startsWith("/api/auth/")
+    pathname.startsWith("/login") || pathname.startsWith("/api/auth/")
 
   const token = request.cookies.get(SESSION_COOKIE)?.value
   const session = token ? await readSessionToken(token) : null
@@ -23,7 +26,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(login)
   }
 
-  if (session && (pathname === "/login" || pathname === "/register")) {
+  if (session && pathname === "/login") {
     return NextResponse.redirect(new URL("/", request.url))
   }
 

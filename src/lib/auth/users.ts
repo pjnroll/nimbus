@@ -1,15 +1,14 @@
-import { readFile } from "node:fs/promises"
-import { hashPassword, verifyPassword } from "@/lib/auth/password"
 import type { SessionUser } from "@/lib/auth/token"
 import { isNotFound, usersFilePath } from "@/lib/data-dir"
 import { nowISO } from "@/lib/dates"
 import { enqueue, writeJsonAtomic } from "@/lib/persist-fs"
 import { provisionUserStore } from "@/lib/persist-store"
+import { readFile } from "node:fs/promises"
 
 export type UserRecord = {
   id: string
   email: string
-  passwordHash: string
+  googleSub: string | null
   createdAt: string
 }
 
@@ -18,12 +17,45 @@ export type UsersFile = {
   users: UserRecord[]
 }
 
+export type GoogleProfile = {
+  sub: string
+  email: string
+}
+
 const EMPTY_USERS: UsersFile = { version: 1, users: [] }
 
-function isUsersFile(value: unknown): value is UsersFile {
-  if (!value || typeof value !== "object") return false
+function coerceUser(value: unknown): UserRecord | null {
+  if (!value || typeof value !== "object") return null
+  const candidate = value as Partial<UserRecord>
+  if (
+    typeof candidate.id !== "string" ||
+    typeof candidate.email !== "string" ||
+    typeof candidate.createdAt !== "string"
+  ) {
+    return null
+  }
+  return {
+    id: candidate.id,
+    email: normalizeEmail(candidate.email),
+    googleSub:
+      typeof candidate.googleSub === "string" && candidate.googleSub
+        ? candidate.googleSub
+        : null,
+    createdAt: candidate.createdAt,
+  }
+}
+
+function coerceUsersFile(value: unknown): UsersFile | null {
+  if (!value || typeof value !== "object") return null
   const candidate = value as Partial<UsersFile>
-  return candidate.version === 1 && Array.isArray(candidate.users)
+  if (candidate.version !== 1 || !Array.isArray(candidate.users)) return null
+  const users: UserRecord[] = []
+  for (const raw of candidate.users) {
+    const user = coerceUser(raw)
+    if (!user) return null
+    users.push(user)
+  }
+  return { version: 1, users }
 }
 
 function toPublic(user: UserRecord): SessionUser {
@@ -47,10 +79,11 @@ async function readUsersNow(): Promise<UsersFile> {
   try {
     const raw = await readFile(usersFilePath(), "utf8")
     const parsed: unknown = JSON.parse(raw)
-    if (!isUsersFile(parsed)) {
+    const coerced = coerceUsersFile(parsed)
+    if (!coerced) {
       throw new Error("File utenti Nimbus non valido")
     }
-    return parsed
+    return coerced
   } catch (error) {
     if (isNotFound(error)) return EMPTY_USERS
     throw error
@@ -67,51 +100,47 @@ export async function canRegister(): Promise<boolean> {
   return file.users.length === 0
 }
 
-export function findUserByEmail(email: string): Promise<UserRecord | null> {
-  const normalized = normalizeEmail(email)
-  return enqueue(async () => {
-    const file = await readUsersNow()
-    return file.users.find((user) => user.email === normalized) ?? null
-  })
+async function writeUsers(users: UserRecord[]): Promise<void> {
+  await writeJsonAtomic(usersFilePath(), { version: 1, users } satisfies UsersFile)
 }
 
-export function createUser(
-  email: string,
-  password: string,
-): Promise<SessionUser> {
-  const normalized = normalizeEmail(email)
+export function upsertGoogleUser(profile: GoogleProfile): Promise<SessionUser> {
+  const normalized = normalizeEmail(profile.email)
+  const sub = profile.sub.trim()
   return enqueue(async () => {
-    if (!envAllowsRegister()) {
-      const current = await readUsersNow()
-      if (current.users.length > 0) {
-        throw new Error("register-disabled")
-      }
+    if (!sub || !isValidEmail(normalized)) {
+      throw new Error("invalid-google-profile")
     }
     const file = await readUsersNow()
-    if (file.users.some((user) => user.email === normalized)) {
-      throw new Error("email-taken")
+    const bySub = file.users.find((user) => user.googleSub === sub)
+    if (bySub) {
+      if (bySub.email === normalized) return toPublic(bySub)
+      const users = file.users.map((user) =>
+        user.id === bySub.id ? { ...user, email: normalized } : user,
+      )
+      await writeUsers(users)
+      return toPublic({ ...bySub, email: normalized })
+    }
+    const byEmail = file.users.find((user) => user.email === normalized)
+    if (byEmail) {
+      const linked = { ...byEmail, googleSub: sub }
+      const users = file.users.map((user) =>
+        user.id === byEmail.id ? linked : user,
+      )
+      await writeUsers(users)
+      return toPublic(linked)
+    }
+    if (!envAllowsRegister() && file.users.length > 0) {
+      throw new Error("register-disabled")
     }
     const user: UserRecord = {
       id: crypto.randomUUID(),
       email: normalized,
-      passwordHash: await hashPassword(password),
+      googleSub: sub,
       createdAt: nowISO(),
     }
-    await writeJsonAtomic(usersFilePath(), {
-      version: 1,
-      users: [...file.users, user],
-    })
+    await writeUsers([...file.users, user])
     await provisionUserStore(user.id, file.users.length === 0)
     return toPublic(user)
   })
-}
-
-export async function authenticateUser(
-  email: string,
-  password: string,
-): Promise<SessionUser | null> {
-  const user = await findUserByEmail(email)
-  if (!user) return null
-  const ok = await verifyPassword(password, user.passwordHash)
-  return ok ? toPublic(user) : null
 }

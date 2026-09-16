@@ -8,7 +8,7 @@ export type SessionUser = {
   email: string
 }
 
-function secretKey(): Uint8Array {
+export function authSecretKey(): Uint8Array {
   const fromEnv = process.env.NIMBUS_AUTH_SECRET?.trim()
   const secret =
     fromEnv ||
@@ -27,14 +27,14 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
     .setSubject(user.id)
     .setIssuedAt()
     .setExpirationTime("24h")
-    .sign(secretKey())
+    .sign(authSecretKey())
 }
 
 export async function readSessionToken(
   token: string,
 ): Promise<SessionUser | null> {
   try {
-    const { payload } = await jwtVerify(token, secretKey())
+    const { payload } = await jwtVerify(token, authSecretKey())
     if (typeof payload.sub !== "string" || typeof payload.email !== "string") {
       return null
     }
