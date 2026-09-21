@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ExternalLinkIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -176,49 +176,6 @@ function ActivityDialogForm({
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
-
-  // #region agent log
-  useEffect(() => {
-    const showByType = form.type === "coordino"
-    const showByStatus = form.status === "in_attesa"
-    const showWaiting = showByType || showByStatus
-    const payload = {
-      sessionId: "b36c36",
-      runId: "pre-fix",
-      hypothesisId: "A",
-      location: "activity-dialog.tsx:waiting-visibility",
-      message: "Waiting section visibility",
-      data: {
-        status: form.status,
-        type: form.type,
-        showByType,
-        showByStatus,
-        showWaiting,
-        waitingOnPersonId: form.waitingOnPersonId,
-        hasWaitingReason: Boolean(form.waitingReason),
-      },
-      timestamp: Date.now(),
-    }
-    fetch("/api/debug-log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch(() => {})
-    fetch("http://127.0.0.1:7925/ingest/0c835834-643c-4ae6-96f5-b2e1662b0892", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "b36c36",
-      },
-      body: JSON.stringify(payload),
-    }).catch(() => {})
-  }, [
-    form.status,
-    form.type,
-    form.waitingOnPersonId,
-    form.waitingReason,
-  ])
-  // #endregion
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -491,7 +448,7 @@ function ActivityDialogForm({
                 />
               </FormField>
             </div>
-            {form.type === "coordino" || form.status === "in_attesa" ? (
+            {form.status === "in_attesa" ? (
               <div className="grid gap-3 rounded-lg bg-amber-50 p-3 sm:grid-cols-2">
                 <FormField label="In attesa di" htmlFor="act-wait">
                   <PersonField
