@@ -95,7 +95,7 @@ export function ActivityCard({
             </p>
           ) : null}
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-            {activity.description || "Nessuna nota. Apri per smistare o completare."}
+            {activity.description || "Nessuna nota. Apri per completare o pianificare."}
           </p>
           {activity.closingNote ? (
             <p className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">

@@ -203,7 +203,7 @@ export default function ProjectDetailPage({
             toast.success("Attività eliminata")
           }}
           emptyTitle="Nessuna attività"
-          emptyDescription="Crea un’attività o smista qualcosa dall’inbox su questo progetto."
+          emptyDescription="Crea un’attività su questo progetto."
         />
       </section>
 

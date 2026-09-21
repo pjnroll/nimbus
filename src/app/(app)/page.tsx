@@ -14,11 +14,7 @@ import {
   todayISO,
   type HomeRange,
 } from "@/lib/dates"
-import {
-  homePeriodGroups,
-  inboxActivities,
-  sortByTaskThenPriority,
-} from "@/lib/selectors"
+import { homePeriodGroups } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import type { Activity } from "@/lib/types"
 
@@ -39,7 +35,7 @@ function headingForRange(range: HomeRange): string {
     case "7giorni":
       return `${hello}. I prossimi sette giorni.`
     case "sempre":
-      return `${hello}. Tutto il lavoro.`
+      return `${hello}. Tutti i task.`
   }
 }
 
@@ -53,10 +49,6 @@ export default function OggiPage() {
   const groups = useMemo(
     () => homePeriodGroups(store.activities, store.tasks, from, to, today),
     [store.activities, store.tasks, from, to, today],
-  )
-  const inbox = useMemo(
-    () => sortByTaskThenPriority(inboxActivities(store.activities), store.tasks),
-    [store.activities, store.tasks],
   )
   const tasksActivities = useMemo(() => {
     return groups.tasksInRange
@@ -78,12 +70,6 @@ export default function OggiPage() {
     toast.success("Attività eliminata")
   }
 
-  const calm =
-    groups.overdue.length === 0 &&
-    inbox.length === 0 &&
-    tasksActivities.length === 0 &&
-    groups.withoutTask.length === 0
-
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-4">
@@ -95,8 +81,7 @@ export default function OggiPage() {
             {headingForRange(range)}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Prima i task in esecuzione in questa finestra, poi le attività senza
-            slot e l’inbox da smistare.
+            I task pianificati in questa finestra, ordinati per data e ora.
           </p>
         </div>
         <Tabs
@@ -115,27 +100,23 @@ export default function OggiPage() {
         </Tabs>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Stat label="Task" value={tasksActivities.length} tone="info" />
-        <Stat label="In ritardo" value={groups.overdue.length} tone="danger" />
-        <Stat label="Senza slot" value={groups.withoutTask.length} tone="warn" />
-        <Stat label="Chiusi" value={groups.chiusi.length} tone="ok" />
-        <Stat label="Da smistare" value={inbox.length} tone="inbox" />
-      </section>
-
-      {calm ? (
+      {tasksActivities.length === 0 ? (
         <Alert>
-          <AlertTitle>Scrivania in ordine</AlertTitle>
+          <AlertTitle>Nessun task in queste date</AlertTitle>
           <AlertDescription>
-            Niente task in questa finestra, niente ritardi e niente da smistare.
-            Se arriva una mail o una chat, catturala in Inbox.
+            Pianifica un’esecuzione dal dialog di un’attività, oppure allarga
+            la finestra temporale.
           </AlertDescription>
         </Alert>
-      ) : null}
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {tasksActivities.length === 1
+            ? "1 task in questa finestra"
+            : `${tasksActivities.length} task in questa finestra`}
+        </p>
+      )}
 
-      <Section
-        title="Task"
-        hint="Slot di esecuzione ordinati per data e ora. Hanno priorità sulla vista."
+      <ActivityList
         activities={tasksActivities}
         projects={store.projects}
         onOpen={setSelected}
@@ -143,52 +124,6 @@ export default function OggiPage() {
         onDelete={onDelete}
         emptyTitle="Nessun task"
         emptyDescription="Non ci sono esecuzioni pianificate in queste date."
-      />
-      <Section
-        title="In ritardo"
-        hint="Task con data già passata, ancora aperti."
-        activities={groups.overdue.filter(
-          (activity) => !tasksActivities.some((item) => item.id === activity.id),
-        )}
-        projects={store.projects}
-        onOpen={setSelected}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle="Nessun ritardo"
-        emptyDescription="I task aperti sono tutti nel futuro, o non hanno data."
-      />
-      <Section
-        title="Attività senza slot"
-        hint="Lavoro aperto senza task di esecuzione: va pianificato o smistato."
-        activities={groups.withoutTask}
-        projects={store.projects}
-        onOpen={setSelected}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle="Tutto pianificato"
-        emptyDescription="Le attività aperte hanno già un task, o sono in inbox."
-      />
-      <Section
-        title="Chiusi"
-        hint="Fatto o fallita, con task in questa finestra."
-        activities={groups.chiusi}
-        projects={store.projects}
-        onOpen={setSelected}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle="Niente di chiuso"
-        emptyDescription="Le attività chiuse con task in queste date compariranno qui."
-      />
-      <Section
-        title="Da smistare"
-        hint="Inbox: dieci secondi, poi progetto e un eventuale task."
-        activities={inbox}
-        projects={store.projects}
-        onOpen={setSelected}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle="Inbox vuota"
-        emptyDescription="Le nuove richieste da email o chat vanno catturate in Inbox."
       />
 
       <ActivityDialog
@@ -199,74 +134,5 @@ export default function OggiPage() {
         activity={selected}
       />
     </div>
-  )
-}
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone: "danger" | "warn" | "info" | "neutral" | "ok" | "inbox"
-}) {
-  const tones = {
-    danger: "bg-red-50 text-red-900 ring-red-100",
-    warn: "bg-amber-50 text-amber-950 ring-amber-100",
-    info: "bg-blue-50 text-blue-950 ring-blue-100",
-    inbox: "bg-cyan-50 text-cyan-950 ring-cyan-100",
-    neutral: "bg-card text-foreground ring-foreground/10",
-    ok: "bg-green-50 text-green-950 ring-green-100",
-  }
-  return (
-    <div className={`rounded-xl px-4 py-3 ring-1 ${tones[tone]}`}>
-      <p className="text-2xl font-semibold">{value}</p>
-      <p className="text-xs font-medium opacity-80">{label}</p>
-    </div>
-  )
-}
-
-function Section({
-  title,
-  hint,
-  activities,
-  projects,
-  onOpen,
-  onStatus,
-  onDelete,
-  emptyTitle,
-  emptyDescription,
-}: {
-  title: string
-  hint: string
-  activities: Activity[]
-  projects: ReturnType<typeof useNimbus>["store"]["projects"]
-  onOpen: (activity: Activity) => void
-  onStatus: (
-    id: string,
-    status: Activity["status"],
-    extra?: Partial<Activity>,
-  ) => void
-  onDelete: (id: string) => void
-  emptyTitle: string
-  emptyDescription: string
-}) {
-  return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="font-heading text-xl font-medium">{title}</h2>
-        <p className="text-sm text-muted-foreground">{hint}</p>
-      </div>
-      <ActivityList
-        activities={activities}
-        projects={projects}
-        onOpen={onOpen}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle={emptyTitle}
-        emptyDescription={emptyDescription}
-      />
-    </section>
   )
 }

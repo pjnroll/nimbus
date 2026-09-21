@@ -11,7 +11,7 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Nimbus — Cloud PM",
   description:
-    "Scrivania personale per un Technical Cloud Project Manager: inbox, attività da eseguire o coordinare, progetti e link Drive.",
+    "Scrivania personale per un Technical Cloud Project Manager: task, attività, progetti e link Drive.",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

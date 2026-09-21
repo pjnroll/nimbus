@@ -6,7 +6,6 @@ import {
   CalendarDaysIcon,
   CloudIcon,
   FolderKanbanIcon,
-  InboxIcon,
   ListTodoIcon,
   LogOutIcon,
   MenuIcon,
@@ -21,32 +20,25 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { inboxActivities } from "@/lib/selectors"
 import { resetClientStore, useNimbus } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 const NAV = [
   { href: "/", label: "Oggi", icon: CalendarDaysIcon },
-  { href: "/inbox", label: "Inbox", icon: InboxIcon },
   { href: "/attivita", label: "Attività", icon: ListTodoIcon },
   { href: "/progetti", label: "Progetti", icon: FolderKanbanIcon },
 ]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { store, hydrated } = useNimbus()
+  const { hydrated } = useNimbus()
   const [open, setOpen] = useState(false)
-  const inboxCount = inboxActivities(store.activities).length
 
   return (
     <div className="flex min-h-full bg-background">
       <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm md:flex">
         <Brand />
-        <Nav
-          pathname={pathname}
-          inboxCount={inboxCount}
-          hydrated={hydrated}
-        />
+        <Nav pathname={pathname} />
         <SidebarFooter />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -61,12 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <SheetTitle>Navigazione</SheetTitle>
               </SheetHeader>
               <Brand />
-              <Nav
-                pathname={pathname}
-                inboxCount={inboxCount}
-                hydrated={hydrated}
-                onNavigate={() => setOpen(false)}
-              />
+              <Nav pathname={pathname} onNavigate={() => setOpen(false)} />
               <SidebarFooter />
             </SheetContent>
           </Sheet>
@@ -111,13 +98,9 @@ function Brand() {
 
 function Nav({
   pathname,
-  inboxCount,
-  hydrated,
   onNavigate,
 }: {
   pathname: string
-  inboxCount: number
-  hydrated: boolean
   onNavigate?: () => void
 }) {
   return (
@@ -142,11 +125,6 @@ function Nav({
           >
             <Icon className="size-4" />
             <span className="flex-1">{item.label}</span>
-            {item.href === "/inbox" && hydrated && inboxCount > 0 ? (
-              <span className="rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
-                {inboxCount}
-              </span>
-            ) : null}
           </Link>
         )
       })}

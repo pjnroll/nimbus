@@ -28,7 +28,7 @@ export function CaptureBar() {
       source,
       requesterId,
       type: "eseguo",
-      status: "inbox",
+      status: "in_corso",
       priority: "media",
       waitingOnPersonId: null,
       waitingReason: "",
@@ -39,7 +39,7 @@ export function CaptureBar() {
     })
     setTitle("")
     setRequesterId(null)
-    toast.success("Richiesta in inbox. Smistala quando hai un minuto.")
+    toast.success("Attività creata")
   }
 
   return (

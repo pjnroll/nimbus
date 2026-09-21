@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { ExternalLinkIcon } from "lucide-react"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
 import { ActivityAttachmentsField } from "@/components/activity-attachments"
@@ -384,16 +385,18 @@ function ActivityDialogForm({
                   ]}
                 />
                 {form.projectId !== NONE_PROJECT ? (
-                  <button
+                  <Button
                     type="button"
-                    className="w-fit text-xs font-medium text-primary underline-offset-4 hover:underline"
+                    variant="outline"
+                    className="w-full justify-center sm:w-auto"
                     onClick={() => {
                       onOpenChange(false)
                       router.push(`/progetti/${form.projectId}`)
                     }}
                   >
                     Vai al progetto
-                  </button>
+                    <ExternalLinkIcon className="size-4" />
+                  </Button>
                 ) : null}
               </div>
             </FormField>
