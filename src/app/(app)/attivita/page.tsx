@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
@@ -97,96 +97,6 @@ export default function AttivitaPage() {
     projectId !== ALL && projectId !== NONE_PROJECT
       ? store.projects.find((project) => project.id === projectId)
       : undefined
-
-  const boardStatuses = BOARD_STATUSES
-
-  // #region agent log
-  useEffect(() => {
-    const board = document.querySelector("[data-debug-board]")
-    if (!board) return
-    const main = document.querySelector("main")
-    const columns = [...board.querySelectorAll("[data-debug-col]")]
-    const cards = [...board.querySelectorAll("article")]
-    const colRects = columns.map((el) => {
-      const r = el.getBoundingClientRect()
-      const style = getComputedStyle(el)
-      return {
-        status: el.getAttribute("data-debug-col"),
-        width: Math.round(r.width),
-        left: Math.round(r.left),
-        right: Math.round(r.right),
-        minWidth: style.minWidth,
-        overflow: style.overflow,
-      }
-    })
-    const cardRects = cards.map((el) => {
-      const r = el.getBoundingClientRect()
-      const col = el.closest("[data-debug-col]")
-      const colR = col?.getBoundingClientRect()
-      return {
-        title: (el.querySelector("h3")?.textContent ?? "").slice(0, 40),
-        width: Math.round(r.width),
-        scrollWidth: el.scrollWidth,
-        left: Math.round(r.left),
-        right: Math.round(r.right),
-        top: Math.round(r.top),
-        bottom: Math.round(r.bottom),
-        col: col?.getAttribute("data-debug-col"),
-        overflowsCol: colR
-          ? Math.round(r.right) > Math.round(colR.right) + 1 ||
-            Math.round(r.left) < Math.round(colR.left) - 1
-          : null,
-        widerThanCol: colR ? Math.round(r.width) > Math.round(colR.width) + 1 : null,
-      }
-    })
-    const overlaps: { a: string; b: string; dx: number; dy: number }[] = []
-    for (let i = 0; i < cardRects.length; i++) {
-      for (let j = i + 1; j < cardRects.length; j++) {
-        const a = cardRects[i]
-        const b = cardRects[j]
-        const dx = Math.min(a.right, b.right) - Math.max(a.left, b.left)
-        const dy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
-        if (dx > 4 && dy > 4) {
-          overlaps.push({
-            a: `${a.col}:${a.title}`,
-            b: `${b.col}:${b.title}`,
-            dx,
-            dy,
-          })
-        }
-      }
-    }
-    const boardStyle = getComputedStyle(board)
-    const payload = {
-      sessionId: "b36c36",
-      runId: "post-fix",
-      hypothesisId: "B",
-      location: "attivita/page.tsx:board-measure",
-      message: "Board layout geometry",
-      data: {
-        viewport: window.innerWidth,
-        mainWidth: main ? Math.round(main.getBoundingClientRect().width) : null,
-        boardWidth: Math.round(board.getBoundingClientRect().width),
-        gridTemplateColumns: boardStyle.gridTemplateColumns,
-        colCount: columns.length,
-        cardCount: cards.length,
-        colRects,
-        overflows: cardRects.filter((c) => c.overflowsCol),
-        overlaps,
-        sampleCards: cardRects.slice(0, 6),
-      },
-      timestamp: Date.now(),
-    }
-    fetch("http://127.0.0.1:7925/ingest/0c835834-643c-4ae6-96f5-b2e1662b0892", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "b36c36",
-      },
-      body: JSON.stringify(payload),
-    }).catch(() => {})
-  }, [filtered])
-  // #endregion
 
   function onStatus(
     id: string,
@@ -299,16 +209,9 @@ export default function AttivitaPage() {
           />
         </TabsContent>
         <TabsContent value="bacheca" className="mt-4">
-          <div
-            data-debug-board
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-          >
-            {boardStatuses.map((column) => (
-              <div
-                key={column}
-                data-debug-col={column}
-                className="min-w-0 space-y-3"
-              >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {BOARD_STATUSES.map((column) => (
+              <div key={column} className="min-w-0 space-y-3">
                 <h2 className="font-heading text-sm font-medium tracking-wide uppercase">
                   {STATUS_LABELS[column]}
                 </h2>
