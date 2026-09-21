@@ -27,6 +27,7 @@ const projects: Project[] = [
     name: "Cloud AWS · Piattaforma Tributi",
     client: "Maggioli — Area Enti Locali",
     status: "attivo",
+    color: "teal",
     driveUrl: "https://drive.google.com/drive/folders/tributi-cloud",
     personIds: ["ppl-andrea", "ppl-laura", "ppl-netops", "ppl-marco"],
     categories: [
@@ -44,6 +45,7 @@ const projects: Project[] = [
     name: "Migrazione Azure · Comuni",
     client: "Maggioli — Cloud Practice",
     status: "attivo",
+    color: "amber",
     driveUrl: "https://drive.google.com/drive/folders/migrazione-azure-comuni",
     personIds: ["ppl-sara", "ppl-team-azure", "ppl-referente", "ppl-referente-it"],
     categories: [
@@ -61,6 +63,7 @@ const projects: Project[] = [
     name: "Supporto ambienti QA",
     client: "Maggioli — Internal IT",
     status: "in_attesa",
+    color: "sky",
     driveUrl: "https://drive.google.com/drive/folders/ambienti-qa",
     personIds: ["ppl-helpdesk", "ppl-iam"],
     categories: [

@@ -1,7 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
-import { ExternalLinkIcon, MoreHorizontalIcon, PaperclipIcon } from "lucide-react"
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ExternalLinkIcon,
+  MoreHorizontalIcon,
+  PaperclipIcon,
+} from "lucide-react"
 import { ActivityAttachmentLinks } from "@/components/activity-attachments"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +56,7 @@ export function ActivityCard({
   onDelete: () => void
 }) {
   const { store } = useNimbus()
+  const [expanded, setExpanded] = useState(false)
   const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
   const waitingOnName = personName(store.people, activity.waitingOnPersonId)
@@ -59,7 +67,8 @@ export function ActivityCard({
     activity.status !== "inbox" &&
     Boolean(task && isTaskOverdue(task, todayISO()))
   const dense = density === "dense"
-  const borderClass = projectBorderClass(project?.id)
+  const showDetails = !dense || expanded
+  const borderClass = projectBorderClass(project)
 
   return (
     <article
@@ -75,14 +84,6 @@ export function ActivityCard({
           onClick={onOpen}
           className="min-w-0 flex-1 text-left"
         >
-          {!dense ? (
-            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              <StatusBadge status={activity.status} />
-              <TypeBadge type={activity.type} />
-              <PriorityBadge priority={activity.priority} />
-              {categoryLabel ? <CategoryBadge name={categoryLabel} /> : null}
-            </div>
-          ) : null}
           {showProjectName ? (
             <p
               className={cn(
@@ -96,13 +97,12 @@ export function ActivityCard({
           <h3
             className={cn(
               "font-heading leading-snug font-medium text-foreground",
-              dense ? "mt-0.5 line-clamp-2 text-sm" : "text-base",
-              showProjectName && project && !dense && "mt-0.5",
+              dense ? "mt-0.5 line-clamp-2 text-sm" : "mt-0.5 text-base",
             )}
           >
             {activity.title}
           </h3>
-          {(showTaskSlot || !dense) && task ? (
+          {(showTaskSlot || (!dense && task)) && task ? (
             <p
               className={cn(
                 "font-medium",
@@ -115,49 +115,11 @@ export function ActivityCard({
               {!dense && taskPeople ? ` · ${taskPeople}` : ""}
             </p>
           ) : null}
-          {!dense ? (
-            <>
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                {activity.description ||
-                  "Nessuna nota. Apri per completare o pianificare."}
-              </p>
-              {activity.closingNote ? (
-                <p className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                  Chiusura: {activity.closingNote}
-                </p>
-              ) : null}
-              <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <div>
-                  <dt className="sr-only">Origine</dt>
-                  <dd>
-                    {SOURCE_LABELS[activity.source]}
-                    {requesterName ? ` · ${requesterName}` : ""}
-                  </dd>
-                </div>
-                {!project ? (
-                  <div>
-                    <dt className="sr-only">Progetto</dt>
-                    <dd>Senza progetto</dd>
-                  </div>
-                ) : null}
-              </dl>
-              {activity.status === "in_attesa" && waitingOnName ? (
-                <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-950">
-                  In attesa di <span className="font-medium">{waitingOnName}</span>
-                  {activity.waitingReason ? ` — ${activity.waitingReason}` : ""}
-                </p>
-              ) : null}
-            </>
-          ) : null}
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0"
-              />
+              <Button variant="ghost" size="icon-sm" className="shrink-0" />
             }
           >
             <MoreHorizontalIcon />
@@ -210,30 +172,105 @@ export function ActivityCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {!dense && activity.attachments.length > 0 ? (
-        <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-          <PaperclipIcon className="size-3" />
-          {activity.attachments.length === 1
-            ? "1 allegato"
-            : `${activity.attachments.length} allegati`}
-        </p>
+
+      {showDetails ? (
+        <div className={cn(dense ? "mt-2 border-t border-foreground/10 pt-2" : "mt-0")}>
+          <button
+            type="button"
+            onClick={onOpen}
+            className="w-full min-w-0 text-left"
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <StatusBadge status={activity.status} />
+              <TypeBadge type={activity.type} />
+              <PriorityBadge priority={activity.priority} />
+              {categoryLabel ? <CategoryBadge name={categoryLabel} /> : null}
+            </div>
+            {dense && task ? (
+              <p
+                className={cn(
+                  "mb-1 text-xs font-medium",
+                  overdue ? "text-red-700" : "text-foreground",
+                )}
+              >
+                {overdue ? "In ritardo · " : ""}
+                {formatTaskSlotIT(task)}
+                {taskPeople ? ` · ${taskPeople}` : ""}
+              </p>
+            ) : null}
+            <p className="line-clamp-3 text-sm text-muted-foreground">
+              {activity.description ||
+                "Nessuna nota. Apri per completare o pianificare."}
+            </p>
+            {activity.closingNote ? (
+              <p className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                Chiusura: {activity.closingNote}
+              </p>
+            ) : null}
+            <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <div>
+                <dt className="sr-only">Origine</dt>
+                <dd>
+                  {SOURCE_LABELS[activity.source]}
+                  {requesterName ? ` · ${requesterName}` : ""}
+                </dd>
+              </div>
+              {!project ? (
+                <div>
+                  <dt className="sr-only">Progetto</dt>
+                  <dd>Senza progetto</dd>
+                </div>
+              ) : null}
+            </dl>
+            {activity.status === "in_attesa" && waitingOnName ? (
+              <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-950">
+                In attesa di <span className="font-medium">{waitingOnName}</span>
+                {activity.waitingReason ? ` — ${activity.waitingReason}` : ""}
+              </p>
+            ) : null}
+          </button>
+          {activity.attachments.length > 0 ? (
+            <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+              <PaperclipIcon className="size-3" />
+              {activity.attachments.length === 1
+                ? "1 allegato"
+                : `${activity.attachments.length} allegati`}
+            </p>
+          ) : null}
+          <ActivityAttachmentLinks
+            activityId={activity.id}
+            attachments={activity.attachments}
+          />
+          {activity.driveUrl ? (
+            <Link
+              href={activity.driveUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              Cartella o file Drive
+              <ExternalLinkIcon className="size-3" />
+            </Link>
+          ) : null}
+        </div>
       ) : null}
-      {!dense ? (
-        <ActivityAttachmentLinks
-          activityId={activity.id}
-          attachments={activity.attachments}
-        />
-      ) : null}
-      {!dense && activity.driveUrl ? (
-        <Link
-          href={activity.driveUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        >
-          Cartella o file Drive
-          <ExternalLinkIcon className="size-3" />
-        </Link>
+
+      {dense ? (
+        <div className="mt-1 flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-expanded={expanded}
+            aria-label={expanded ? "Comprimi scheda" : "Espandi scheda"}
+            onClick={(event) => {
+              event.stopPropagation()
+              setExpanded((current) => !current)
+            }}
+          >
+            {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          </Button>
+        </div>
       ) : null}
     </article>
   )

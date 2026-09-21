@@ -1,4 +1,5 @@
 import { nowISO } from "@/lib/dates"
+import { coerceProjectColor } from "@/lib/project-color"
 import {
   isLegacyNimbusStore,
   isNimbusStore,
@@ -249,6 +250,10 @@ function ensureStoreShape(store: NimbusStore): NimbusStore {
     version: 4,
     projects: store.projects.map((project) => ({
       ...project,
+      color: coerceProjectColor(
+        (project as Project & { color?: unknown }).color,
+        project.id,
+      ),
       categories: Array.isArray(project.categories) ? project.categories : [],
     })),
     activities: store.activities.map((activity) =>

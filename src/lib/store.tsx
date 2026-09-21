@@ -23,6 +23,7 @@ import {
   upsertPersonInStore,
 } from "@/lib/people"
 import { cloneProjectInStore, deleteActivityFromStore } from "@/lib/projects"
+import { defaultProjectColor } from "@/lib/project-color"
 import { SEED_STORE } from "@/lib/seed"
 import {
   removeTaskFromStore,
@@ -278,9 +279,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addProject = useCallback(
     (input: Omit<Project, "id" | "createdAt" | "updatedAt">) => {
       const stamp = nowISO()
+      const id = newId()
       const project: Project = {
         ...input,
-        id: newId(),
+        id,
+        color: input.color ?? defaultProjectColor(id),
         createdAt: stamp,
         updatedAt: stamp,
       }

@@ -10,8 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { personNames } from "@/lib/people"
+import { projectBorderClass } from "@/lib/project-color"
 import { useNimbus } from "@/lib/store"
 import type { Project } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 export function ProjectRow({
   project,
@@ -26,7 +28,12 @@ export function ProjectRow({
   const peopleLabel = personNames(store.people, project.personIds)
 
   return (
-    <article className="flex items-center gap-3 px-4 py-3">
+    <article
+      className={cn(
+        "flex items-center gap-3 border-l-4 px-4 py-3",
+        projectBorderClass(project),
+      )}
+    >
       <Link href={`/progetti/${project.id}`} className="min-w-0 flex-1">
         <h3 className="font-heading truncate text-base font-medium leading-snug">
           {project.name}

@@ -1,3 +1,5 @@
+import type { ProjectColorId } from "@/lib/project-color"
+
 export type ProjectStatus = "attivo" | "in_attesa" | "chiuso"
 export type ActivityStatus =
   | "inbox"
@@ -8,6 +10,8 @@ export type ActivityStatus =
 export type ActivityType = "eseguo" | "coordino"
 export type ActivitySource = "email" | "chat" | "altro"
 export type Priority = "alta" | "media" | "bassa"
+
+export type { ProjectColorId }
 
 export type Person = {
   id: string
@@ -24,6 +28,7 @@ export type Project = {
   name: string
   client: string
   status: ProjectStatus
+  color: ProjectColorId
   driveUrl: string
   personIds: string[]
   categories: Category[]

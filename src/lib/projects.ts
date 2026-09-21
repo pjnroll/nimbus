@@ -1,5 +1,6 @@
 import { nowISO } from "@/lib/dates"
 import { newId } from "@/lib/people"
+import { coerceProjectColor } from "@/lib/project-color"
 import { closedActivity, removeTaskFromStore, taskByActivityId } from "@/lib/tasks"
 import type { Activity, NimbusStore, Project, Task } from "@/lib/types"
 
@@ -18,11 +19,13 @@ export function cloneProjectInStore(
     return { id, name: category.name }
   })
 
+  const nextId = newId()
   const project: Project = {
-    id: newId(),
+    id: nextId,
     name: `Copia di ${source.name}`,
     client: source.client,
     status: "attivo",
+    color: coerceProjectColor(source.color, nextId),
     driveUrl: "",
     personIds: [...source.personIds],
     categories,

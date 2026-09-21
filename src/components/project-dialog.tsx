@@ -19,13 +19,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { cleanCategoryName, findCategoryByName } from "@/lib/categories"
 import { newId } from "@/lib/people"
+import {
+  PROJECT_COLOR_OPTIONS,
+  type ProjectColorId,
+} from "@/lib/project-color"
 import { useNimbus } from "@/lib/store"
 import type { Category, Project, ProjectStatus } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 type FormState = {
   name: string
   client: string
   status: ProjectStatus
+  color: ProjectColorId
   driveUrl: string
   personIds: string[]
   categories: Category[]
@@ -37,6 +43,7 @@ function emptyForm(): FormState {
     name: "",
     client: "",
     status: "attivo",
+    color: "teal",
     driveUrl: "",
     personIds: [],
     categories: [],
@@ -49,6 +56,7 @@ function fromProject(project: Project): FormState {
     name: project.name,
     client: project.client,
     status: project.status,
+    color: project.color,
     driveUrl: project.driveUrl,
     personIds: project.personIds,
     categories: project.categories ?? [],
@@ -112,6 +120,7 @@ function ProjectDialogForm({
       name: form.name.trim(),
       client: form.client.trim(),
       status: form.status,
+      color: form.color,
       driveUrl: form.driveUrl.trim(),
       personIds: form.personIds,
       categories: form.categories,
@@ -175,6 +184,32 @@ function ProjectDialogForm({
               />
             </FormField>
           </div>
+          <FormField label="Colore">
+            <div className="flex flex-wrap gap-2" role="listbox" aria-label="Colore progetto">
+              {PROJECT_COLOR_OPTIONS.map((option) => {
+                const selected = form.color === option.id
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    title={option.label}
+                    onClick={() => setForm({ ...form, color: option.id })}
+                    className={cn(
+                      "size-7 rounded-full ring-offset-2 transition-shadow",
+                      option.swatchClass,
+                      selected
+                        ? "ring-2 ring-foreground"
+                        : "ring-1 ring-foreground/15 hover:ring-foreground/40",
+                    )}
+                  >
+                    <span className="sr-only">{option.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </FormField>
           <FormField label="Cartella Drive" htmlFor="prj-drive">
             <Input
               id="prj-drive"
