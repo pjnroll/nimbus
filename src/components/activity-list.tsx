@@ -62,7 +62,7 @@ export function ActivityList({
 
   return (
     <>
-      <div className="grid gap-3">
+      <div className="grid min-w-0 gap-3">
         {activities.map((activity) => (
           <ActivityCard
             key={activity.id}

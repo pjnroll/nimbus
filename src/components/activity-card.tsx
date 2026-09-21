@@ -55,7 +55,7 @@ export function ActivityCard({
   return (
     <article
       className={cn(
-        "group relative rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 transition-shadow hover:shadow-md",
+        "group relative min-w-0 overflow-hidden rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 transition-shadow hover:shadow-md",
         activity.type === "coordino" ? "border-l-4 border-l-amber-400" : "border-l-4 border-l-blue-600",
       )}
     >

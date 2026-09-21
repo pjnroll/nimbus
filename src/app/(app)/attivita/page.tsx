@@ -159,8 +159,8 @@ export default function AttivitaPage() {
     const boardStyle = getComputedStyle(board)
     const payload = {
       sessionId: "b36c36",
-      runId: "pre-fix",
-      hypothesisId: "A-C",
+      runId: "post-fix",
+      hypothesisId: "B",
       location: "attivita/page.tsx:board-measure",
       message: "Board layout geometry",
       data: {
@@ -301,13 +301,13 @@ export default function AttivitaPage() {
         <TabsContent value="bacheca" className="mt-4">
           <div
             data-debug-board
-            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
           >
             {boardStatuses.map((column) => (
               <div
                 key={column}
                 data-debug-col={column}
-                className="space-y-3"
+                className="min-w-0 space-y-3"
               >
                 <h2 className="font-heading text-sm font-medium tracking-wide uppercase">
                   {STATUS_LABELS[column]}
