@@ -16,6 +16,7 @@ import { todayISO } from "@/lib/dates"
 import { SOURCE_LABELS } from "@/lib/labels"
 import { categoryName } from "@/lib/categories"
 import { personName, personNames } from "@/lib/people"
+import { projectBorderClass } from "@/lib/project-color"
 import { useNimbus } from "@/lib/store"
 import {
   closedActivity,
@@ -26,10 +27,14 @@ import {
 import type { Activity, Project } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
+export type ActivityCardDensity = "comfortable" | "dense"
+
 export function ActivityCard({
   activity,
   project,
   showProjectName = true,
+  density = "comfortable",
+  showTaskSlot = false,
   onOpen,
   onStatus,
   onDelete,
@@ -37,6 +42,8 @@ export function ActivityCard({
   activity: Activity
   project?: Project
   showProjectName?: boolean
+  density?: ActivityCardDensity
+  showTaskSlot?: boolean
   onOpen: () => void
   onStatus: (status: Activity["status"]) => void
   onDelete: () => void
@@ -51,82 +58,107 @@ export function ActivityCard({
     !closedActivity(activity.status) &&
     activity.status !== "inbox" &&
     Boolean(task && isTaskOverdue(task, todayISO()))
+  const dense = density === "dense"
+  const borderClass = projectBorderClass(project?.id)
 
   return (
     <article
       className={cn(
-        "group relative min-w-0 overflow-hidden rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 transition-shadow hover:shadow-md",
-        activity.type === "coordino" ? "border-l-4 border-l-amber-400" : "border-l-4 border-l-blue-600",
+        "group relative min-w-0 overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-foreground/10 transition-shadow hover:shadow-md border-l-4",
+        borderClass,
+        dense ? "px-3 py-2" : "p-4",
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2">
         <button
           type="button"
           onClick={onOpen}
           className="min-w-0 flex-1 text-left"
         >
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <StatusBadge status={activity.status} />
-            <TypeBadge type={activity.type} />
-            <PriorityBadge priority={activity.priority} />
-            {categoryLabel ? <CategoryBadge name={categoryLabel} /> : null}
-          </div>
-          {showProjectName && project ? (
-            <p className="text-sm font-medium text-foreground">{project.name}</p>
+          {!dense ? (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <StatusBadge status={activity.status} />
+              <TypeBadge type={activity.type} />
+              <PriorityBadge priority={activity.priority} />
+              {categoryLabel ? <CategoryBadge name={categoryLabel} /> : null}
+            </div>
+          ) : null}
+          {showProjectName ? (
+            <p
+              className={cn(
+                "truncate text-muted-foreground",
+                dense ? "text-xs" : "text-sm font-medium text-foreground",
+              )}
+            >
+              {project?.name ?? "Senza progetto"}
+            </p>
           ) : null}
           <h3
             className={cn(
-              "font-heading text-base leading-snug font-medium text-foreground",
-              showProjectName && project && "mt-0.5",
+              "font-heading leading-snug font-medium text-foreground",
+              dense ? "mt-0.5 line-clamp-2 text-sm" : "text-base",
+              showProjectName && project && !dense && "mt-0.5",
             )}
           >
             {activity.title}
           </h3>
-          {task ? (
+          {(showTaskSlot || !dense) && task ? (
             <p
               className={cn(
-                "mt-1 text-sm font-medium",
+                "font-medium",
+                dense ? "mt-0.5 text-xs" : "mt-1 text-sm",
                 overdue ? "text-red-700" : "text-foreground",
               )}
             >
               {overdue ? "In ritardo · " : ""}
               {formatTaskSlotIT(task)}
-              {taskPeople ? ` · ${taskPeople}` : ""}
+              {!dense && taskPeople ? ` · ${taskPeople}` : ""}
             </p>
           ) : null}
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-            {activity.description || "Nessuna nota. Apri per completare o pianificare."}
-          </p>
-          {activity.closingNote ? (
-            <p className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-              Chiusura: {activity.closingNote}
-            </p>
-          ) : null}
-          <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <div>
-              <dt className="sr-only">Origine</dt>
-              <dd>
-                {SOURCE_LABELS[activity.source]}
-                {requesterName ? ` · ${requesterName}` : ""}
-              </dd>
-            </div>
-            {!project ? (
-              <div>
-                <dt className="sr-only">Progetto</dt>
-                <dd>Senza progetto</dd>
-              </div>
-            ) : null}
-          </dl>
-          {activity.status === "in_attesa" && waitingOnName ? (
-            <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-950">
-              In attesa di <span className="font-medium">{waitingOnName}</span>
-              {activity.waitingReason ? ` — ${activity.waitingReason}` : ""}
-            </p>
+          {!dense ? (
+            <>
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                {activity.description ||
+                  "Nessuna nota. Apri per completare o pianificare."}
+              </p>
+              {activity.closingNote ? (
+                <p className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                  Chiusura: {activity.closingNote}
+                </p>
+              ) : null}
+              <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <div>
+                  <dt className="sr-only">Origine</dt>
+                  <dd>
+                    {SOURCE_LABELS[activity.source]}
+                    {requesterName ? ` · ${requesterName}` : ""}
+                  </dd>
+                </div>
+                {!project ? (
+                  <div>
+                    <dt className="sr-only">Progetto</dt>
+                    <dd>Senza progetto</dd>
+                  </div>
+                ) : null}
+              </dl>
+              {activity.status === "in_attesa" && waitingOnName ? (
+                <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-950">
+                  In attesa di <span className="font-medium">{waitingOnName}</span>
+                  {activity.waitingReason ? ` — ${activity.waitingReason}` : ""}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="ghost" size="icon-sm" className="shrink-0" />}
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0"
+              />
+            }
           >
             <MoreHorizontalIcon />
             <span className="sr-only">Azioni</span>
@@ -164,7 +196,9 @@ export function ActivityCard({
             )}
             {activity.driveUrl ? (
               <DropdownMenuItem
-                onClick={() => window.open(activity.driveUrl, "_blank", "noopener")}
+                onClick={() =>
+                  window.open(activity.driveUrl, "_blank", "noopener")
+                }
               >
                 Apri Drive
               </DropdownMenuItem>
@@ -176,7 +210,7 @@ export function ActivityCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {activity.attachments.length > 0 ? (
+      {!dense && activity.attachments.length > 0 ? (
         <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
           <PaperclipIcon className="size-3" />
           {activity.attachments.length === 1
@@ -184,11 +218,13 @@ export function ActivityCard({
             : `${activity.attachments.length} allegati`}
         </p>
       ) : null}
-      <ActivityAttachmentLinks
-        activityId={activity.id}
-        attachments={activity.attachments}
-      />
-      {activity.driveUrl ? (
+      {!dense ? (
+        <ActivityAttachmentLinks
+          activityId={activity.id}
+          attachments={activity.attachments}
+        />
+      ) : null}
+      {!dense && activity.driveUrl ? (
         <Link
           href={activity.driveUrl}
           target="_blank"

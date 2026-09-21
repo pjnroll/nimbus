@@ -2,7 +2,10 @@
 
 import { useState } from "react"
 import { InboxIcon } from "lucide-react"
-import { ActivityCard } from "@/components/activity-card"
+import {
+  ActivityCard,
+  type ActivityCardDensity,
+} from "@/components/activity-card"
 import {
   CloseActivityDialog,
   type CloseOutcome,
@@ -10,11 +13,15 @@ import {
 import { EmptyState } from "@/components/empty-state"
 import { closedActivity } from "@/lib/tasks"
 import type { Activity, Project } from "@/lib/types"
+import { cn } from "@/lib/utils"
 
 export function ActivityList({
   activities,
   projects,
   showProjectName = true,
+  density = "comfortable",
+  showTaskSlot = false,
+  compactEmpty = false,
   onOpen,
   onStatus,
   onDelete,
@@ -24,6 +31,9 @@ export function ActivityList({
   activities: Activity[]
   projects: Project[]
   showProjectName?: boolean
+  density?: ActivityCardDensity
+  showTaskSlot?: boolean
+  compactEmpty?: boolean
   onOpen: (activity: Activity) => void
   onStatus: (
     id: string,
@@ -51,6 +61,11 @@ export function ActivityList({
   }
 
   if (activities.length === 0) {
+    if (compactEmpty) {
+      return (
+        <p className="px-1 py-2 text-sm text-muted-foreground">—</p>
+      )
+    }
     return (
       <EmptyState
         icon={InboxIcon}
@@ -62,13 +77,20 @@ export function ActivityList({
 
   return (
     <>
-      <div className="grid min-w-0 gap-3">
+      <div
+        className={cn(
+          "grid min-w-0",
+          density === "dense" ? "gap-1.5" : "gap-3",
+        )}
+      >
         {activities.map((activity) => (
           <ActivityCard
             key={activity.id}
             activity={activity}
             project={projects.find((project) => project.id === activity.projectId)}
             showProjectName={showProjectName}
+            density={density}
+            showTaskSlot={showTaskSlot}
             onOpen={() => onOpen(activity)}
             onStatus={(status) => handleStatus(activity, status)}
             onDelete={() => onDelete(activity.id)}

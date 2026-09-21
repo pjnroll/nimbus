@@ -119,6 +119,8 @@ export default function OggiPage() {
       <ActivityList
         activities={tasksActivities}
         projects={store.projects}
+        density="dense"
+        showTaskSlot
         onOpen={setSelected}
         onStatus={onStatus}
         onDelete={onDelete}

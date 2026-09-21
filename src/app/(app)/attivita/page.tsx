@@ -204,6 +204,7 @@ export default function AttivitaPage() {
           <ActivityList
             activities={filtered}
             projects={store.projects}
+            density="dense"
             onOpen={setSelected}
             onStatus={onStatus}
             onDelete={onDelete}
@@ -212,25 +213,33 @@ export default function AttivitaPage() {
           />
         </TabsContent>
         <TabsContent value="bacheca" className="mt-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {BOARD_STATUSES.map((column) => (
-              <div key={column} className="min-w-0 space-y-3">
-                <h2 className="font-heading text-sm font-medium tracking-wide uppercase">
-                  {STATUS_LABELS[column]}
-                </h2>
-                <ActivityList
-                  activities={filtered.filter(
-                    (activity) => activity.status === column,
-                  )}
-                  projects={store.projects}
-                  onOpen={setSelected}
-                  onStatus={onStatus}
-                  onDelete={onDelete}
-                  emptyTitle="Vuota"
-                  emptyDescription="Niente in questa colonna con i filtri attuali."
-                />
-              </div>
-            ))}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {BOARD_STATUSES.map((column) => {
+              const columnActivities = filtered.filter(
+                (activity) => activity.status === column,
+              )
+              return (
+                <div key={column} className="min-w-0 space-y-2">
+                  <h2 className="font-heading flex items-baseline gap-2 text-lg font-semibold tracking-tight">
+                    <span>{STATUS_LABELS[column]}</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {columnActivities.length}
+                    </span>
+                  </h2>
+                  <ActivityList
+                    activities={columnActivities}
+                    projects={store.projects}
+                    density="dense"
+                    compactEmpty
+                    onOpen={setSelected}
+                    onStatus={onStatus}
+                    onDelete={onDelete}
+                    emptyTitle="Vuota"
+                    emptyDescription="Niente in questa colonna con i filtri attuali."
+                  />
+                </div>
+              )
+            })}
           </div>
         </TabsContent>
       </Tabs>
