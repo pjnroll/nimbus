@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels"
-import { sortByDueThenPriority } from "@/lib/selectors"
+import { sortByTaskThenPriority } from "@/lib/selectors"
 import { activityCategoryName } from "@/lib/categories"
 import { activityPersonHaystack } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
+import { taskByActivityId } from "@/lib/tasks"
 import {
   NONE_CATEGORY,
   NONE_PROJECT,
@@ -58,11 +59,13 @@ export default function AttivitaPage() {
       }
       if (!needle) return true
       const project = store.projects.find((item) => item.id === activity.projectId)
+      const task = taskByActivityId(store.tasks, activity.id)
       const haystack = [
         activity.title,
         activity.description,
         activity.closingNote,
-        activityPersonHaystack(store.people, activity),
+        activityPersonHaystack(store.people, activity, task),
+        task?.notes ?? "",
         activityCategoryName(store, activity),
         project?.name ?? "",
       ]
@@ -70,15 +73,30 @@ export default function AttivitaPage() {
         .toLowerCase()
       return haystack.includes(needle)
     })
-    return sortByDueThenPriority(list)
-  }, [store.activities, store.projects, store.people, query, status, type, projectId, categoryId])
+    return sortByTaskThenPriority(list, store.tasks)
+  }, [
+    store.activities,
+    store.projects,
+    store.people,
+    store.tasks,
+    query,
+    status,
+    type,
+    projectId,
+    categoryId,
+  ])
 
   const selectedProject =
     projectId !== ALL && projectId !== NONE_PROJECT
       ? store.projects.find((project) => project.id === projectId)
       : undefined
 
-  const boardStatuses: ActivityStatus[] = ["in_corso", "in_attesa", "fatto"]
+  const boardStatuses: ActivityStatus[] = [
+    "in_corso",
+    "in_attesa",
+    "fatto",
+    "fallita",
+  ]
 
   function onStatus(
     id: string,
@@ -191,7 +209,7 @@ export default function AttivitaPage() {
           />
         </TabsContent>
         <TabsContent value="bacheca" className="mt-4">
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {boardStatuses.map((column) => (
               <div key={column} className="space-y-3">
                 <h2 className="font-heading text-sm font-medium tracking-wide uppercase">

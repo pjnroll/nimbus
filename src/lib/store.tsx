@@ -22,8 +22,13 @@ import {
   newId,
   upsertPersonInStore,
 } from "@/lib/people"
-import { cloneProjectInStore } from "@/lib/projects"
+import { cloneProjectInStore, deleteActivityFromStore } from "@/lib/projects"
 import { SEED_STORE } from "@/lib/seed"
+import {
+  removeTaskFromStore,
+  taskByActivityId,
+  upsertTaskInStore,
+} from "@/lib/tasks"
 import {
   STORE_KEY,
   type Activity,
@@ -31,6 +36,7 @@ import {
   type NimbusStore,
   type Person,
   type Project,
+  type Task,
 } from "@/lib/types"
 
 type StoreContextValue = {
@@ -45,6 +51,10 @@ type StoreContextValue = {
   ) => Activity
   updateActivity: (id: string, patch: Partial<Activity>) => void
   deleteActivity: (id: string) => void
+  upsertTask: (
+    input: Omit<Task, "id"> & { id?: string },
+  ) => Task
+  removeTask: (activityId: string) => void
   uploadActivityFiles: (activityId: string, files: File[]) => Promise<void>
   removeActivityAttachment: (
     activityId: string,
@@ -57,10 +67,11 @@ type StoreContextValue = {
 }
 
 const EMPTY_STORE: NimbusStore = {
-  version: 3,
+  version: 4,
   people: [],
   projects: [],
   activities: [],
+  tasks: [],
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null)
@@ -242,12 +253,14 @@ function ensureHydrated() {
 
 function withActivityPeople(
   store: NimbusStore,
-  activity: Pick<
-    Activity,
-    "projectId" | "assigneeIds" | "requesterId" | "waitingOnPersonId"
-  >,
+  activity: Pick<Activity, "projectId" | "requesterId" | "waitingOnPersonId">,
+  task?: Pick<Task, "personIds"> | null,
 ): NimbusStore {
-  return linkPeopleToProject(store, activity.projectId, activityPersonIds(activity))
+  return linkPeopleToProject(
+    store,
+    activity.projectId,
+    activityPersonIds(activity, task),
+  )
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -340,7 +353,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           input.categoryId,
         ),
       }
-      const linked = withActivityPeople(current, activity)
+      const linked = withActivityPeople(
+        current,
+        activity,
+        taskByActivityId(current.tasks, activity.id),
+      )
       writeStore({
         ...linked,
         activities: [activity, ...linked.activities],
@@ -365,7 +382,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         patch.categoryId === undefined ? previous.categoryId : patch.categoryId,
       ),
     }
-    const linked = withActivityPeople(current, nextActivity)
+    const linked = withActivityPeople(
+      current,
+      nextActivity,
+      taskByActivityId(current.tasks, id),
+    )
     writeStore({
       ...linked,
       activities: linked.activities.map((activity) =>
@@ -375,14 +396,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const deleteActivity = useCallback((id: string) => {
-    const current = getSnapshot()
-    writeStore({
-      ...current,
-      activities: current.activities.filter((activity) => activity.id !== id),
-    })
+    writeStore(deleteActivityFromStore(getSnapshot(), id))
     void fetch(`/api/activities/${encodeURIComponent(id)}/attachments`, {
       method: "DELETE",
     })
+  }, [])
+
+  const upsertTask = useCallback(
+    (input: Omit<Task, "id"> & { id?: string }) => {
+      const current = getSnapshot()
+      const activity = current.activities.find(
+        (item) => item.id === input.activityId,
+      )
+      if (!activity) {
+        throw new Error("Attività non trovata")
+      }
+      const result = upsertTaskInStore(current, input)
+      let next = result.store
+      if (activity.status === "inbox") {
+        next = {
+          ...next,
+          activities: next.activities.map((item) =>
+            item.id === activity.id
+              ? { ...item, status: "in_corso", updatedAt: nowISO() }
+              : item,
+          ),
+        }
+      }
+      next = withActivityPeople(next, activity, result.task)
+      writeStore(next)
+      return result.task
+    },
+    [],
+  )
+
+  const removeTask = useCallback((activityId: string) => {
+    writeStore(removeTaskFromStore(getSnapshot(), activityId))
   }, [])
 
   const uploadActivityFiles = useCallback(
@@ -474,6 +523,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addActivity,
       updateActivity,
       deleteActivity,
+      upsertTask,
+      removeTask,
       uploadActivityFiles,
       removeActivityAttachment,
       upsertPerson,
@@ -491,6 +542,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addActivity,
       updateActivity,
       deleteActivity,
+      upsertTask,
+      removeTask,
       uploadActivityFiles,
       removeActivityAttachment,
       upsertPerson,

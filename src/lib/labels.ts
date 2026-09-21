@@ -11,6 +11,7 @@ export const STATUS_LABELS: Record<ActivityStatus, string> = {
   in_corso: "In corso",
   in_attesa: "In attesa",
   fatto: "Fatto",
+  fallita: "Fallita",
 }
 
 export const TYPE_LABELS: Record<ActivityType, string> = {

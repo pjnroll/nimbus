@@ -1,6 +1,7 @@
 import { nowISO } from "@/lib/dates"
 import { newId } from "@/lib/people"
-import type { Activity, NimbusStore, Project } from "@/lib/types"
+import { closedActivity, removeTaskFromStore, taskByActivityId } from "@/lib/tasks"
+import type { Activity, NimbusStore, Project, Task } from "@/lib/types"
 
 export function cloneProjectInStore(
   store: NimbusStore,
@@ -30,29 +31,55 @@ export function cloneProjectInStore(
     updatedAt: stamp,
   }
 
+  const clonedTasks: Task[] = []
   const clonedActivities: Activity[] = store.activities
     .filter(
       (activity) =>
-        activity.projectId === projectId && activity.status !== "fatto",
+        activity.projectId === projectId && !closedActivity(activity.status),
     )
-    .map((activity) => ({
-      ...activity,
-      id: newId(),
-      projectId: project.id,
-      categoryId: activity.categoryId
-        ? (categoryMap.get(activity.categoryId) ?? null)
-        : null,
-      attachments: [],
-      createdAt: stamp,
-      updatedAt: stamp,
-    }))
+    .map((activity) => {
+      const nextId = newId()
+      const task = taskByActivityId(store.tasks, activity.id)
+      if (task) {
+        clonedTasks.push({
+          ...task,
+          id: newId(),
+          activityId: nextId,
+        })
+      }
+      return {
+        ...activity,
+        id: nextId,
+        projectId: project.id,
+        categoryId: activity.categoryId
+          ? (categoryMap.get(activity.categoryId) ?? null)
+          : null,
+        attachments: [],
+        createdAt: stamp,
+        updatedAt: stamp,
+      }
+    })
 
   return {
     store: {
       ...store,
       projects: [project, ...store.projects],
       activities: [...clonedActivities, ...store.activities],
+      tasks: [...clonedTasks, ...store.tasks],
     },
     project,
   }
+}
+
+export function deleteActivityFromStore(
+  store: NimbusStore,
+  activityId: string,
+): NimbusStore {
+  return removeTaskFromStore(
+    {
+      ...store,
+      activities: store.activities.filter((activity) => activity.id !== activityId),
+    },
+    activityId,
+  )
 }

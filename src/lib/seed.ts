@@ -1,5 +1,6 @@
 import { addDaysISO, nowISO } from "@/lib/dates"
-import type { Activity, NimbusStore, Person, Project } from "@/lib/types"
+import { dateToNoonStartsAt } from "@/lib/tasks"
+import type { Activity, NimbusStore, Person, Project, Task } from "@/lib/types"
 
 const created = nowISO()
 
@@ -85,8 +86,6 @@ const activities: Activity[] = [
     type: "eseguo",
     status: "inbox",
     priority: "alta",
-    dueDate: null,
-    assigneeIds: [],
     waitingOnPersonId: null,
     waitingReason: "",
     closingNote: "",
@@ -107,8 +106,6 @@ const activities: Activity[] = [
     type: "eseguo",
     status: "inbox",
     priority: "media",
-    dueDate: null,
-    assigneeIds: [],
     waitingOnPersonId: null,
     waitingReason: "",
     closingNote: "",
@@ -129,8 +126,6 @@ const activities: Activity[] = [
     type: "eseguo",
     status: "in_corso",
     priority: "alta",
-    dueDate: addDaysISO(-2),
-    assigneeIds: [],
     waitingOnPersonId: null,
     waitingReason: "",
     closingNote: "",
@@ -151,8 +146,6 @@ const activities: Activity[] = [
     type: "coordino",
     status: "in_corso",
     priority: "alta",
-    dueDate: addDaysISO(0),
-    assigneeIds: ["ppl-netops"],
     waitingOnPersonId: "ppl-netops",
     waitingReason: "Manca il CIDR definitivo del VPC QA",
     closingNote: "",
@@ -173,8 +166,6 @@ const activities: Activity[] = [
     type: "eseguo",
     status: "in_corso",
     priority: "media",
-    dueDate: addDaysISO(2),
-    assigneeIds: [],
     waitingOnPersonId: null,
     waitingReason: "",
     closingNote: "",
@@ -195,8 +186,6 @@ const activities: Activity[] = [
     type: "coordino",
     status: "in_attesa",
     priority: "alta",
-    dueDate: addDaysISO(-1),
-    assigneeIds: ["ppl-marco"],
     waitingOnPersonId: "ppl-marco",
     waitingReason: "Change firewall in coda CAB",
     closingNote: "",
@@ -217,8 +206,6 @@ const activities: Activity[] = [
     type: "coordino",
     status: "in_attesa",
     priority: "media",
-    dueDate: addDaysISO(1),
-    assigneeIds: ["ppl-referente-it"],
     waitingOnPersonId: "ppl-referente-it",
     waitingReason: "Attesa conferma calendario interno",
     closingNote: "",
@@ -239,8 +226,6 @@ const activities: Activity[] = [
     type: "eseguo",
     status: "in_corso",
     priority: "bassa",
-    dueDate: addDaysISO(1),
-    assigneeIds: [],
     waitingOnPersonId: null,
     waitingReason: "",
     closingNote: "",
@@ -260,8 +245,6 @@ const activities: Activity[] = [
     type: "eseguo",
     status: "fatto",
     priority: "media",
-    dueDate: addDaysISO(-5),
-    assigneeIds: [],
     waitingOnPersonId: null,
     waitingReason: "",
     closingNote: "Quota alzata. Ticket chiuso, nota lasciata in Drive.",
@@ -273,9 +256,69 @@ const activities: Activity[] = [
   },
 ]
 
+const tasks: Task[] = [
+  {
+    id: "tsk-tls",
+    activityId: "act-overdue-tls",
+    startsAt: dateToNoonStartsAt(addDaysISO(-2)),
+    endsAt: null,
+    personIds: [],
+    notes: "",
+  },
+  {
+    id: "tsk-peering",
+    activityId: "act-today-peering",
+    startsAt: `${addDaysISO(0)}T15:00`,
+    endsAt: `${addDaysISO(0)}T16:00`,
+    personIds: ["ppl-netops"],
+    notes: "Allineamento su CIDR e route table",
+  },
+  {
+    id: "tsk-rds",
+    activityId: "act-rds",
+    startsAt: dateToNoonStartsAt(addDaysISO(2)),
+    endsAt: null,
+    personIds: [],
+    notes: "",
+  },
+  {
+    id: "tsk-firewall",
+    activityId: "act-wait-firewall",
+    startsAt: dateToNoonStartsAt(addDaysISO(-1)),
+    endsAt: null,
+    personIds: ["ppl-marco"],
+    notes: "",
+  },
+  {
+    id: "tsk-ad",
+    activityId: "act-wait-ad",
+    startsAt: dateToNoonStartsAt(addDaysISO(1)),
+    endsAt: null,
+    personIds: ["ppl-referente-it"],
+    notes: "",
+  },
+  {
+    id: "tsk-kickoff",
+    activityId: "act-kickoff",
+    startsAt: dateToNoonStartsAt(addDaysISO(1)),
+    endsAt: null,
+    personIds: [],
+    notes: "",
+  },
+  {
+    id: "tsk-eip",
+    activityId: "act-done-eip",
+    startsAt: dateToNoonStartsAt(addDaysISO(-5)),
+    endsAt: null,
+    personIds: [],
+    notes: "",
+  },
+]
+
 export const SEED_STORE: NimbusStore = {
-  version: 3,
+  version: 4,
   people,
   projects,
   activities,
+  tasks,
 }

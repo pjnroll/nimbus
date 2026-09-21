@@ -3,8 +3,12 @@
 import { useState } from "react"
 import { InboxIcon } from "lucide-react"
 import { ActivityCard } from "@/components/activity-card"
-import { CloseActivityDialog } from "@/components/close-activity-dialog"
+import {
+  CloseActivityDialog,
+  type CloseOutcome,
+} from "@/components/close-activity-dialog"
 import { EmptyState } from "@/components/empty-state"
+import { closedActivity } from "@/lib/tasks"
 import type { Activity, Project } from "@/lib/types"
 
 export function ActivityList({
@@ -30,11 +34,17 @@ export function ActivityList({
   emptyTitle: string
   emptyDescription: string
 }) {
-  const [closing, setClosing] = useState<Activity | null>(null)
+  const [closing, setClosing] = useState<{
+    activity: Activity
+    outcome: CloseOutcome
+  } | null>(null)
 
   function handleStatus(activity: Activity, status: Activity["status"]) {
-    if (status === "fatto" && activity.status !== "fatto") {
-      setClosing(activity)
+    if (
+      (status === "fatto" || status === "fallita") &&
+      !closedActivity(activity.status)
+    ) {
+      setClosing({ activity, outcome: status })
       return
     }
     onStatus(activity.id, status)
@@ -66,14 +76,15 @@ export function ActivityList({
         ))}
       </div>
       <CloseActivityDialog
-        activity={closing}
+        activity={closing?.activity ?? null}
+        outcome={closing?.outcome ?? "fatto"}
         open={Boolean(closing)}
         onOpenChange={(open) => {
           if (!open) setClosing(null)
         }}
-        onConfirm={(closingNote) => {
+        onConfirm={(closingNote, outcome) => {
           if (!closing) return
-          onStatus(closing.id, "fatto", { closingNote })
+          onStatus(closing.activity.id, outcome, { closingNote })
         }}
       />
     </>

@@ -11,6 +11,7 @@ export function StatusBadge({ status }: { status: ActivityStatus }) {
     in_corso: "border-slate-200 bg-slate-50 text-slate-700",
     in_attesa: "border-amber-200 bg-amber-50 text-amber-900",
     fatto: "border-green-200 bg-green-50 text-green-800",
+    fallita: "border-red-200 bg-red-50 text-red-800",
   }
   return (
     <Badge variant="outline" className={cn("font-medium", styles[status])}>

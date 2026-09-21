@@ -17,7 +17,7 @@ import {
 import {
   homePeriodGroups,
   inboxActivities,
-  sortByDueThenPriority,
+  sortByTaskThenPriority,
 } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import type { Activity } from "@/lib/types"
@@ -51,13 +51,18 @@ export default function OggiPage() {
   const { from, to } = homeRangeBounds(range, today)
 
   const groups = useMemo(
-    () => homePeriodGroups(store.activities, from, to, today),
-    [store.activities, from, to, today],
+    () => homePeriodGroups(store.activities, store.tasks, from, to, today),
+    [store.activities, store.tasks, from, to, today],
   )
   const inbox = useMemo(
-    () => sortByDueThenPriority(inboxActivities(store.activities)),
-    [store.activities],
+    () => sortByTaskThenPriority(inboxActivities(store.activities), store.tasks),
+    [store.activities, store.tasks],
   )
+  const tasksActivities = useMemo(() => {
+    return groups.tasksInRange
+      .map((task) => store.activities.find((activity) => activity.id === task.activityId))
+      .filter((activity): activity is Activity => Boolean(activity))
+  }, [groups.tasksInRange, store.activities])
 
   function onStatus(
     id: string,
@@ -76,8 +81,8 @@ export default function OggiPage() {
   const calm =
     groups.overdue.length === 0 &&
     inbox.length === 0 &&
-    groups.inCorso.length === 0 &&
-    groups.inAttesa.length === 0
+    tasksActivities.length === 0 &&
+    groups.withoutTask.length === 0
 
   return (
     <div className="space-y-8">
@@ -90,8 +95,8 @@ export default function OggiPage() {
             {headingForRange(range)}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Prima i ritardi, poi ciò che cade in questa finestra: in corso, in
-            attesa, fatto. L’inbox resta da smistare a parte.
+            Prima i task in esecuzione in questa finestra, poi le attività senza
+            slot e l’inbox da smistare.
           </p>
         </div>
         <Tabs
@@ -111,10 +116,10 @@ export default function OggiPage() {
       </header>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <Stat label="Task" value={tasksActivities.length} tone="info" />
         <Stat label="In ritardo" value={groups.overdue.length} tone="danger" />
-        <Stat label="In corso" value={groups.inCorso.length} tone="info" />
-        <Stat label="In attesa" value={groups.inAttesa.length} tone="warn" />
-        <Stat label="Fatto" value={groups.fatto.length} tone="ok" />
+        <Stat label="Senza slot" value={groups.withoutTask.length} tone="warn" />
+        <Stat label="Chiusi" value={groups.chiusi.length} tone="ok" />
         <Stat label="Da smistare" value={inbox.length} tone="inbox" />
       </section>
 
@@ -122,59 +127,61 @@ export default function OggiPage() {
         <Alert>
           <AlertTitle>Scrivania in ordine</AlertTitle>
           <AlertDescription>
-            Niente in ritardo, niente da smistare e niente aperto in questa
-            finestra. Se arriva una mail o una chat, catturala in Inbox.
+            Niente task in questa finestra, niente ritardi e niente da smistare.
+            Se arriva una mail o una chat, catturala in Inbox.
           </AlertDescription>
         </Alert>
       ) : null}
 
       <Section
+        title="Task"
+        hint="Slot di esecuzione ordinati per data e ora. Hanno priorità sulla vista."
+        activities={tasksActivities}
+        projects={store.projects}
+        onOpen={setSelected}
+        onStatus={onStatus}
+        onDelete={onDelete}
+        emptyTitle="Nessun task"
+        emptyDescription="Non ci sono esecuzioni pianificate in queste date."
+      />
+      <Section
         title="In ritardo"
-        hint="Anche se la scadenza è prima di questa finestra: i debiti restano qui."
-        activities={groups.overdue}
+        hint="Task con data già passata, ancora aperti."
+        activities={groups.overdue.filter(
+          (activity) => !tasksActivities.some((item) => item.id === activity.id),
+        )}
         projects={store.projects}
         onOpen={setSelected}
         onStatus={onStatus}
         onDelete={onDelete}
         emptyTitle="Nessun ritardo"
-        emptyDescription="Le scadenze aperte sono tutte nel futuro, o non hanno data."
+        emptyDescription="I task aperti sono tutti nel futuro, o non hanno data."
       />
       <Section
-        title="In corso"
-        hint="Aperture con scadenza in questa finestra, senza i ritardi."
-        activities={groups.inCorso}
+        title="Attività senza slot"
+        hint="Lavoro aperto senza task di esecuzione: va pianificato o smistato."
+        activities={groups.withoutTask}
         projects={store.projects}
         onOpen={setSelected}
         onStatus={onStatus}
         onDelete={onDelete}
-        emptyTitle="Niente in corso"
-        emptyDescription="Non ci sono attività in corso con scadenza in queste date."
+        emptyTitle="Tutto pianificato"
+        emptyDescription="Le attività aperte hanno già un task, o sono in inbox."
       />
       <Section
-        title="In attesa"
-        hint="Stai coordinando: il blocco è da un’altra parte, ma la data cade qui."
-        activities={groups.inAttesa}
-        projects={store.projects}
-        onOpen={setSelected}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle="Nessuno in attesa"
-        emptyDescription="Niente in attesa con scadenza in questa finestra."
-      />
-      <Section
-        title="Fatto"
-        hint="Chiuse, con la scadenza in questa finestra."
-        activities={groups.fatto}
+        title="Chiusi"
+        hint="Fatto o fallita, con task in questa finestra."
+        activities={groups.chiusi}
         projects={store.projects}
         onOpen={setSelected}
         onStatus={onStatus}
         onDelete={onDelete}
         emptyTitle="Niente di chiuso"
-        emptyDescription="Le attività fatte con scadenza in queste date compariranno qui."
+        emptyDescription="Le attività chiuse con task in queste date compariranno qui."
       />
       <Section
         title="Da smistare"
-        hint="Inbox globale: dieci secondi, progetto, tipo, scadenza."
+        hint="Inbox: dieci secondi, poi progetto e un eventuale task."
         activities={inbox}
         projects={store.projects}
         onOpen={setSelected}

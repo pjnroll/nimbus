@@ -26,6 +26,12 @@ import {
 } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
 import {
+  buildStartsAt,
+  taskByActivityId,
+  taskDate,
+  taskTime,
+} from "@/lib/tasks"
+import {
   NONE_PROJECT,
   type Activity,
   type ActivitySource,
@@ -43,13 +49,17 @@ type FormState = {
   type: ActivityType
   status: ActivityStatus
   priority: Priority
-  dueDate: string
-  assigneeIds: string[]
   waitingOnPersonId: string | null
   waitingReason: string
   closingNote: string
   driveUrl: string
   categoryId: string | null
+  taskDate: string
+  taskStart: string
+  taskEnd: string
+  taskPersonIds: string[]
+  taskNotes: string
+  taskPlanned: boolean
 }
 
 const emptyForm = (defaults?: Partial<FormState>): FormState => ({
@@ -61,17 +71,24 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   type: "eseguo",
   status: "inbox",
   priority: "media",
-  dueDate: "",
-  assigneeIds: [],
   waitingOnPersonId: null,
   waitingReason: "",
   closingNote: "",
   driveUrl: "",
   categoryId: null,
+  taskDate: "",
+  taskStart: "",
+  taskEnd: "",
+  taskPersonIds: [],
+  taskNotes: "",
+  taskPlanned: false,
   ...defaults,
 })
 
-function fromActivity(activity: Activity): FormState {
+function fromActivity(
+  activity: Activity,
+  task: ReturnType<typeof taskByActivityId>,
+): FormState {
   return {
     title: activity.title,
     description: activity.description,
@@ -81,13 +98,17 @@ function fromActivity(activity: Activity): FormState {
     type: activity.type,
     status: activity.status,
     priority: activity.priority,
-    dueDate: activity.dueDate ?? "",
-    assigneeIds: activity.assigneeIds,
     waitingOnPersonId: activity.waitingOnPersonId,
     waitingReason: activity.waitingReason,
     closingNote: activity.closingNote,
     driveUrl: activity.driveUrl,
     categoryId: activity.categoryId,
+    taskDate: task ? taskDate(task.startsAt) : "",
+    taskStart: task ? taskTime(task.startsAt) : "",
+    taskEnd: task ? taskTime(task.endsAt) : "",
+    taskPersonIds: task?.personIds ?? [],
+    taskNotes: task?.notes ?? "",
+    taskPlanned: Boolean(task),
   }
 }
 
@@ -133,10 +154,23 @@ function ActivityDialogForm({
   onOpenChange: (open: boolean) => void
 }) {
   const router = useRouter()
-  const { store, addActivity, updateActivity, deleteActivity, uploadActivityFiles, removeActivityAttachment, upsertPerson, upsertCategory } =
-    useNimbus()
+  const {
+    store,
+    addActivity,
+    updateActivity,
+    deleteActivity,
+    upsertTask,
+    removeTask,
+    uploadActivityFiles,
+    removeActivityAttachment,
+    upsertPerson,
+    upsertCategory,
+  } = useNimbus()
+  const existingTask = activity
+    ? taskByActivityId(store.tasks, activity.id)
+    : undefined
   const [form, setForm] = useState<FormState>(() =>
-    activity ? fromActivity(activity) : emptyForm(defaults),
+    activity ? fromActivity(activity, existingTask) : emptyForm(defaults),
   )
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [busy, setBusy] = useState(false)
@@ -144,6 +178,28 @@ function ActivityDialogForm({
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  function applyTask(activityId: string) {
+    if (form.taskPlanned) {
+      if (!form.taskDate) {
+        throw new Error("Per il task serve almeno la data.")
+      }
+      const startsAt = buildStartsAt(form.taskDate, form.taskStart)
+      const endsAt =
+        form.taskEnd.trim()
+          ? buildStartsAt(form.taskDate, form.taskEnd)
+          : null
+      upsertTask({
+        activityId,
+        startsAt,
+        endsAt,
+        personIds: form.taskPersonIds,
+        notes: form.taskNotes.trim(),
+      })
+    } else if (existingTask) {
+      removeTask(activityId)
+    }
   }
 
   async function save() {
@@ -155,6 +211,10 @@ function ActivityDialogForm({
       setError("Il link Drive deve iniziare con http:// o https://")
       return
     }
+    if (form.taskPlanned && !form.taskDate) {
+      setError("Per pianificare il task serve una data.")
+      return
+    }
     const payload = {
       title: form.title.trim(),
       description: form.description.trim(),
@@ -164,36 +224,34 @@ function ActivityDialogForm({
       type: form.type,
       status: form.status,
       priority: form.priority,
-      dueDate: form.dueDate || null,
-      assigneeIds: form.assigneeIds,
       waitingOnPersonId: form.waitingOnPersonId,
       waitingReason: form.waitingReason.trim(),
       closingNote: form.closingNote.trim(),
       driveUrl: form.driveUrl.trim(),
-      categoryId:
-        form.projectId === NONE_PROJECT ? null : form.categoryId,
+      categoryId: form.projectId === NONE_PROJECT ? null : form.categoryId,
     }
     setBusy(true)
     try {
       if (activity) {
         updateActivity(activity.id, payload)
+        applyTask(activity.id)
         toast.success("Attività aggiornata")
         onOpenChange(false)
         return
       }
       const created = addActivity({ ...payload, attachments: [] })
+      applyTask(created.id)
       if (pendingFiles.length > 0) {
         await uploadActivityFiles(created.id, pendingFiles)
       }
       toast.success("Attività creata")
       onOpenChange(false)
-    } catch (uploadError) {
+    } catch (saveError) {
       toast.error(
-        uploadError instanceof Error
-          ? uploadError.message
-          : "Attività salvata, ma i file non sono partiti",
+        saveError instanceof Error
+          ? saveError.message
+          : "Non riesco a salvare",
       )
-      onOpenChange(false)
     } finally {
       setBusy(false)
     }
@@ -293,163 +351,233 @@ function ActivityDialogForm({
             />
           </FormField>
         </FormSection>
-        <FormSection title="Piano">
-          <FormField label="Progetto">
-            <div className="grid gap-1.5">
-              <AppSelect
-                value={form.projectId}
-                onChange={(value) => {
-                  setForm((current) => {
-                    const nextProject =
-                      value === NONE_PROJECT
-                        ? undefined
-                        : store.projects.find((project) => project.id === value)
-                    const keep = nextProject?.categories.some(
-                      (category) => category.id === current.categoryId,
-                    )
-                    return {
-                      ...current,
-                      projectId: value,
-                      categoryId: keep ? current.categoryId : null,
-                    }
-                  })
-                }}
-                options={[
-                  { value: NONE_PROJECT, label: "Nessun progetto" },
-                  ...[...store.projects]
-                    .sort((a, b) => a.name.localeCompare(b.name, "it"))
-                    .map((project) => ({
-                      value: project.id,
-                      label: project.name,
-                    })),
-                ]}
-              />
-              {form.projectId !== NONE_PROJECT ? (
-                <button
-                  type="button"
-                  className="w-fit text-xs font-medium text-primary underline-offset-4 hover:underline"
-                  onClick={() => {
-                    onOpenChange(false)
-                    router.push(`/progetti/${form.projectId}`)
+        <div className="grid content-start gap-6">
+          <FormSection title="Piano">
+            <FormField label="Progetto">
+              <div className="grid gap-1.5">
+                <AppSelect
+                  value={form.projectId}
+                  onChange={(value) => {
+                    setForm((current) => {
+                      const nextProject =
+                        value === NONE_PROJECT
+                          ? undefined
+                          : store.projects.find((project) => project.id === value)
+                      const keep = nextProject?.categories.some(
+                        (category) => category.id === current.categoryId,
+                      )
+                      return {
+                        ...current,
+                        projectId: value,
+                        categoryId: keep ? current.categoryId : null,
+                      }
+                    })
                   }}
-                >
-                  Vai al progetto
-                </button>
-              ) : null}
-            </div>
-          </FormField>
-          {form.projectId !== NONE_PROJECT ? (
-            <FormField label="Categoria" htmlFor="act-category">
-              <CategoryField
-                id="act-category"
-                categories={
-                  store.projects.find((project) => project.id === form.projectId)
-                    ?.categories ?? []
-                }
-                value={form.categoryId ? [form.categoryId] : []}
-                onChange={(ids) => patch("categoryId", ids[0] ?? null)}
-                onCreate={(name) => upsertCategory(form.projectId, name)}
-                multiple={false}
-                placeholder="Applicativo, infrastruttura, documentazione"
-              />
+                  options={[
+                    { value: NONE_PROJECT, label: "Nessun progetto" },
+                    ...[...store.projects]
+                      .sort((a, b) => a.name.localeCompare(b.name, "it"))
+                      .map((project) => ({
+                        value: project.id,
+                        label: project.name,
+                      })),
+                  ]}
+                />
+                {form.projectId !== NONE_PROJECT ? (
+                  <button
+                    type="button"
+                    className="w-fit text-xs font-medium text-primary underline-offset-4 hover:underline"
+                    onClick={() => {
+                      onOpenChange(false)
+                      router.push(`/progetti/${form.projectId}`)
+                    }}
+                  >
+                    Vai al progetto
+                  </button>
+                ) : null}
+              </div>
             </FormField>
-          ) : null}
-          <FormField label="Svolta da" htmlFor="act-assignees">
-            <PersonField
-              id="act-assignees"
-              people={store.people}
-              value={form.assigneeIds}
-              onChange={(assigneeIds) => patch("assigneeIds", assigneeIds)}
-              onCreate={upsertPerson}
-              suggestIds={projectPeople}
-              placeholder="Chi deve svolgere l’attività"
-            />
-          </FormField>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Tipo">
-              <AppSelect
-                value={form.type}
-                onChange={(value) => patch("type", value as ActivityType)}
-                options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
-                  value,
-                  label,
-                }))}
-              />
-            </FormField>
-            <FormField label="Stato">
-              <AppSelect
-                value={form.status}
-                onChange={(value) => patch("status", value as ActivityStatus)}
-                options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
-                  value,
-                  label,
-                }))}
-              />
-            </FormField>
-            <FormField label="Priorità">
-              <AppSelect
-                value={form.priority}
-                onChange={(value) => patch("priority", value as Priority)}
-                options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
-                  value,
-                  label,
-                }))}
-              />
-            </FormField>
-            <FormField label="Scadenza" htmlFor="act-due">
-              <Input
-                id="act-due"
-                type="date"
-                value={form.dueDate}
-                onChange={(event) => patch("dueDate", event.target.value)}
-              />
-            </FormField>
-          </div>
-          {form.type === "coordino" || form.status === "in_attesa" ? (
-            <div className="grid gap-3 rounded-lg bg-amber-50 p-3 sm:grid-cols-2">
-              <FormField label="In attesa di" htmlFor="act-wait">
-                <PersonField
-                  id="act-wait"
-                  people={store.people}
-                  value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
-                  onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
-                  onCreate={upsertPerson}
+            {form.projectId !== NONE_PROJECT ? (
+              <FormField label="Categoria" htmlFor="act-category">
+                <CategoryField
+                  id="act-category"
+                  categories={
+                    store.projects.find((project) => project.id === form.projectId)
+                      ?.categories ?? []
+                  }
+                  value={form.categoryId ? [form.categoryId] : []}
+                  onChange={(ids) => patch("categoryId", ids[0] ?? null)}
+                  onCreate={(name) => upsertCategory(form.projectId, name)}
                   multiple={false}
-                  suggestIds={projectPeople}
-                  placeholder="Nome o team"
+                  placeholder="Applicativo, infrastruttura, documentazione"
                 />
               </FormField>
-              <FormField label="Perché è fermo" htmlFor="act-reason">
-                <Input
-                  id="act-reason"
-                  value={form.waitingReason}
-                  onChange={(event) => patch("waitingReason", event.target.value)}
-                  placeholder="Cosa manca"
+            ) : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Tipo">
+                <AppSelect
+                  value={form.type}
+                  onChange={(value) => patch("type", value as ActivityType)}
+                  options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                />
+              </FormField>
+              <FormField label="Stato">
+                <AppSelect
+                  value={form.status}
+                  onChange={(value) => patch("status", value as ActivityStatus)}
+                  options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                />
+              </FormField>
+              <FormField label="Priorità">
+                <AppSelect
+                  value={form.priority}
+                  onChange={(value) => patch("priority", value as Priority)}
+                  options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
                 />
               </FormField>
             </div>
-          ) : null}
-          {form.status === "fatto" ? (
-            <FormField label="Nota di chiusura" htmlFor="act-closing">
-              <Textarea
-                id="act-closing"
-                value={form.closingNote}
-                onChange={(event) => patch("closingNote", event.target.value)}
-                placeholder="Come si è chiusa, cosa è rimasto in Drive, chi ha sbloccato"
-              />
-            </FormField>
-          ) : null}
-        </FormSection>
+            {form.type === "coordino" || form.status === "in_attesa" ? (
+              <div className="grid gap-3 rounded-lg bg-amber-50 p-3 sm:grid-cols-2">
+                <FormField label="In attesa di" htmlFor="act-wait">
+                  <PersonField
+                    id="act-wait"
+                    people={store.people}
+                    value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
+                    onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
+                    onCreate={upsertPerson}
+                    multiple={false}
+                    suggestIds={projectPeople}
+                    placeholder="Nome o team"
+                  />
+                </FormField>
+                <FormField label="Perché è fermo" htmlFor="act-reason">
+                  <Input
+                    id="act-reason"
+                    value={form.waitingReason}
+                    onChange={(event) =>
+                      patch("waitingReason", event.target.value)
+                    }
+                    placeholder="Cosa manca"
+                  />
+                </FormField>
+              </div>
+            ) : null}
+            {form.status === "fatto" || form.status === "fallita" ? (
+              <FormField label="Nota di chiusura" htmlFor="act-closing">
+                <Textarea
+                  id="act-closing"
+                  value={form.closingNote}
+                  onChange={(event) => patch("closingNote", event.target.value)}
+                  placeholder="Come si è chiusa, cosa è rimasto in Drive, chi ha sbloccato"
+                />
+              </FormField>
+            ) : null}
+          </FormSection>
+          <FormSection title="Task">
+            {!form.taskPlanned ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => patch("taskPlanned", true)}
+              >
+                Pianifica esecuzione
+              </Button>
+            ) : (
+              <div className="grid gap-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <FormField label="Data" htmlFor="task-date">
+                    <Input
+                      id="task-date"
+                      type="date"
+                      value={form.taskDate}
+                      onChange={(event) => patch("taskDate", event.target.value)}
+                    />
+                  </FormField>
+                  <FormField label="Inizio" htmlFor="task-start">
+                    <Input
+                      id="task-start"
+                      type="time"
+                      value={form.taskStart}
+                      onChange={(event) => patch("taskStart", event.target.value)}
+                    />
+                  </FormField>
+                  <FormField label="Fine" htmlFor="task-end">
+                    <Input
+                      id="task-end"
+                      type="time"
+                      value={form.taskEnd}
+                      onChange={(event) => patch("taskEnd", event.target.value)}
+                    />
+                  </FormField>
+                </div>
+                <FormField label="Con chi" htmlFor="task-people">
+                  <PersonField
+                    id="task-people"
+                    people={store.people}
+                    value={form.taskPersonIds}
+                    onChange={(ids) => patch("taskPersonIds", ids)}
+                    onCreate={upsertPerson}
+                    suggestIds={projectPeople}
+                    placeholder="Chi partecipa allo slot"
+                  />
+                </FormField>
+                <FormField label="Nota dello slot" htmlFor="task-notes">
+                  <Input
+                    id="task-notes"
+                    value={form.taskNotes}
+                    onChange={(event) => patch("taskNotes", event.target.value)}
+                    placeholder="Es. call su rightsizing"
+                  />
+                </FormField>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() =>
+                    setForm((current) => ({
+                      ...current,
+                      taskPlanned: false,
+                      taskDate: "",
+                      taskStart: "",
+                      taskEnd: "",
+                      taskPersonIds: [],
+                      taskNotes: "",
+                    }))
+                  }
+                >
+                  Rimuovi task
+                </Button>
+              </div>
+            )}
+          </FormSection>
+        </div>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <DialogFooter className={activity ? "sm:justify-between" : undefined}>
         {activity ? (
-          <Button variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={remove}>
+          <Button
+            variant="ghost"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={remove}
+          >
             Elimina
           </Button>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={busy}
+          >
             Annulla
           </Button>
           <Button onClick={() => void save()} disabled={busy}>

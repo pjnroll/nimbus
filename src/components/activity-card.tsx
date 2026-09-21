@@ -12,11 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CategoryBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/status-badges"
-import { formatDateIT, isOverdue, todayISO } from "@/lib/dates"
+import { todayISO } from "@/lib/dates"
 import { SOURCE_LABELS } from "@/lib/labels"
 import { categoryName } from "@/lib/categories"
 import { personName, personNames } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
+import {
+  closedActivity,
+  formatTaskSlotIT,
+  isTaskOverdue,
+  taskByActivityId,
+} from "@/lib/tasks"
 import type { Activity, Project } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -36,14 +42,15 @@ export function ActivityCard({
   onDelete: () => void
 }) {
   const { store } = useNimbus()
+  const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
   const waitingOnName = personName(store.people, activity.waitingOnPersonId)
-  const assigneeLabel = personNames(store.people, activity.assigneeIds)
+  const taskPeople = task ? personNames(store.people, task.personIds) : ""
   const categoryLabel = categoryName(project, activity.categoryId)
   const overdue =
-    activity.status !== "fatto" &&
+    !closedActivity(activity.status) &&
     activity.status !== "inbox" &&
-    isOverdue(activity.dueDate, todayISO())
+    Boolean(task && isTaskOverdue(task, todayISO()))
 
   return (
     <article
@@ -75,6 +82,18 @@ export function ActivityCard({
           >
             {activity.title}
           </h3>
+          {task ? (
+            <p
+              className={cn(
+                "mt-1 text-sm font-medium",
+                overdue ? "text-red-700" : "text-foreground",
+              )}
+            >
+              {overdue ? "In ritardo · " : ""}
+              {formatTaskSlotIT(task)}
+              {taskPeople ? ` · ${taskPeople}` : ""}
+            </p>
+          ) : null}
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
             {activity.description || "Nessuna nota. Apri per smistare o completare."}
           </p>
@@ -97,19 +116,6 @@ export function ActivityCard({
                 <dd>Senza progetto</dd>
               </div>
             ) : null}
-            {assigneeLabel ? (
-              <div>
-                <dt className="sr-only">Svolta da</dt>
-                <dd>{assigneeLabel}</dd>
-              </div>
-            ) : null}
-            <div>
-              <dt className="sr-only">Scadenza</dt>
-              <dd className={cn(overdue && "font-medium text-red-700")}>
-                {overdue ? "In ritardo · " : ""}
-                {formatDateIT(activity.dueDate)}
-              </dd>
-            </div>
           </dl>
           {activity.status === "in_attesa" && waitingOnName ? (
             <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-950">
@@ -132,20 +138,25 @@ export function ActivityCard({
                 Prendi in carico
               </DropdownMenuItem>
             ) : null}
-            {activity.status !== "fatto" && activity.status !== "in_corso" ? (
+            {!closedActivity(activity.status) && activity.status !== "in_corso" ? (
               <DropdownMenuItem onClick={() => onStatus("in_corso")}>
                 Segna in corso
               </DropdownMenuItem>
             ) : null}
-            {activity.status !== "fatto" && activity.status !== "in_attesa" ? (
+            {!closedActivity(activity.status) && activity.status !== "in_attesa" ? (
               <DropdownMenuItem onClick={() => onStatus("in_attesa")}>
                 Metti in attesa
               </DropdownMenuItem>
             ) : null}
-            {activity.status !== "fatto" ? (
-              <DropdownMenuItem onClick={() => onStatus("fatto")}>
-                Segna fatto
-              </DropdownMenuItem>
+            {!closedActivity(activity.status) ? (
+              <>
+                <DropdownMenuItem onClick={() => onStatus("fatto")}>
+                  Segna fatto
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onStatus("fallita")}>
+                  Segna fallita
+                </DropdownMenuItem>
+              </>
             ) : (
               <DropdownMenuItem onClick={() => onStatus("in_corso")}>
                 Riapri

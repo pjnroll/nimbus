@@ -30,8 +30,6 @@ export function CaptureBar() {
       type: "eseguo",
       status: "inbox",
       priority: "media",
-      dueDate: null,
-      assigneeIds: [],
       waitingOnPersonId: null,
       waitingReason: "",
       closingNote: "",

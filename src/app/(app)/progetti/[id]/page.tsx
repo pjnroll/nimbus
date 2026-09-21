@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { personNames } from "@/lib/people"
-import { openActivities, sortByDueThenPriority } from "@/lib/selectors"
+import { openActivities, sortByTaskThenPriority } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import { NONE_CATEGORY, type Activity } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -51,8 +51,8 @@ export default function ProjectDetailPage({
 
   const activities = useMemo(() => {
     const mine = store.activities.filter((activity) => activity.projectId === id)
-    return sortByDueThenPriority(mine)
-  }, [store.activities, id])
+    return sortByTaskThenPriority(mine, store.tasks)
+  }, [store.activities, store.tasks, id])
 
   const openAll = openActivities(activities)
   const visible = activities.filter((activity) => {
