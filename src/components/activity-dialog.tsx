@@ -182,29 +182,35 @@ function ActivityDialogForm({
     const showByType = form.type === "coordino"
     const showByStatus = form.status === "in_attesa"
     const showWaiting = showByType || showByStatus
+    const payload = {
+      sessionId: "b36c36",
+      runId: "pre-fix",
+      hypothesisId: "A",
+      location: "activity-dialog.tsx:waiting-visibility",
+      message: "Waiting section visibility",
+      data: {
+        status: form.status,
+        type: form.type,
+        showByType,
+        showByStatus,
+        showWaiting,
+        waitingOnPersonId: form.waitingOnPersonId,
+        hasWaitingReason: Boolean(form.waitingReason),
+      },
+      timestamp: Date.now(),
+    }
+    fetch("/api/debug-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {})
     fetch("http://127.0.0.1:7925/ingest/0c835834-643c-4ae6-96f5-b2e1662b0892", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Debug-Session-Id": "b36c36",
       },
-      body: JSON.stringify({
-        sessionId: "b36c36",
-        runId: "pre-fix",
-        hypothesisId: "A",
-        location: "activity-dialog.tsx:waiting-visibility",
-        message: "Waiting section visibility",
-        data: {
-          status: form.status,
-          type: form.type,
-          showByType,
-          showByStatus,
-          showWaiting,
-          waitingOnPersonId: form.waitingOnPersonId,
-          hasWaitingReason: Boolean(form.waitingReason),
-        },
-        timestamp: Date.now(),
-      }),
+      body: JSON.stringify(payload),
     }).catch(() => {})
   }, [
     form.status,
