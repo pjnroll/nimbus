@@ -26,6 +26,10 @@ import { personName, personNames } from "@/lib/people"
 import { projectBorderClass } from "@/lib/project-color"
 import { useNimbus } from "@/lib/store"
 import {
+  copyTextToClipboard,
+  formatTaskExportLine,
+} from "@/lib/task-export"
+import {
   closedActivity,
   formatTaskSlotIT,
   isTaskOverdue,
@@ -33,6 +37,7 @@ import {
 } from "@/lib/tasks"
 import type { Activity, Project } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 export type ActivityCardDensity = "comfortable" | "dense"
 
@@ -69,6 +74,18 @@ export function ActivityCard({
   const dense = density === "dense"
   const showDetails = !dense || expanded
   const borderClass = projectBorderClass(project)
+
+  async function copyExportLine() {
+    if (!task) return
+    const line = formatTaskExportLine(
+      project?.name ?? "Senza progetto",
+      activity.title,
+      task,
+    )
+    const ok = await copyTextToClipboard(line)
+    if (ok) toast.success("Riga copiata negli appunti")
+    else toast.error("Impossibile copiare negli appunti")
+  }
 
   return (
     <article
@@ -163,6 +180,11 @@ export function ActivityCard({
                 }
               >
                 Apri Drive
+              </DropdownMenuItem>
+            ) : null}
+            {task ? (
+              <DropdownMenuItem onClick={() => void copyExportLine()}>
+                Copia riga export
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuSeparator />

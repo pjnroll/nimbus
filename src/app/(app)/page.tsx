@@ -1,10 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   formatRangeIT,
@@ -16,6 +18,10 @@ import {
 } from "@/lib/dates"
 import { homePeriodGroups, sortTasksByStartsAt } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
+import {
+  copyTextToClipboard,
+  formatTasksExportForDay,
+} from "@/lib/task-export"
 import { taskByActivityId } from "@/lib/tasks"
 import type { Activity } from "@/lib/types"
 
@@ -42,7 +48,12 @@ export default function AgendaPage() {
   const [selected, setSelected] = useState<Activity | null>(null)
   const [range, setRange] = useState<HomeRange>("settimana")
   const today = todayISO()
+  const [exportDate, setExportDate] = useState(today)
   const { from, to } = homeRangeBounds(range, today)
+
+  useEffect(() => {
+    if (range === "oggi") setExportDate(today)
+  }, [range, today])
 
   const groups = useMemo(
     () => homePeriodGroups(store.activities, store.tasks, from, to, today),
@@ -80,6 +91,23 @@ export default function AgendaPage() {
     toast.success("Attività eliminata")
   }
 
+  async function copyDay() {
+    const text = formatTasksExportForDay(store, exportDate)
+    if (!text) {
+      toast.message("Nessun task in quella data")
+      return
+    }
+    const ok = await copyTextToClipboard(text)
+    if (ok) {
+      const lines = text.split("\n").length
+      toast.success(
+        lines === 1 ? "1 riga copiata" : `${lines} righe copiate`,
+      )
+    } else {
+      toast.error("Impossibile copiare negli appunti")
+    }
+  }
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-4">
@@ -94,20 +122,34 @@ export default function AgendaPage() {
             I task in agenda in questa finestra, in ordine cronologico.
           </p>
         </div>
-        <Tabs
-          value={range}
-          onValueChange={(next) => {
-            if (typeof next === "string" && isHomeRange(next)) setRange(next)
-          }}
-        >
-          <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start sm:w-fit">
-            {RANGE_TABS.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <Tabs
+            value={range}
+            onValueChange={(next) => {
+              if (typeof next === "string" && isHomeRange(next)) setRange(next)
+            }}
+          >
+            <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start sm:w-fit">
+              {RANGE_TABS.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="date"
+              value={exportDate}
+              onChange={(event) => setExportDate(event.target.value)}
+              aria-label="Giorno da esportare"
+              className="w-auto"
+            />
+            <Button type="button" variant="outline" onClick={() => void copyDay()}>
+              Copia giornata
+            </Button>
+          </div>
+        </div>
       </header>
 
       {tasksActivities.length === 0 ? (
