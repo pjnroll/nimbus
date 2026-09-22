@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  formatLongDateIT,
   formatRangeIT,
   greetingForNow,
   homeRangeBounds,
@@ -22,7 +23,7 @@ import {
   copyTextToClipboard,
   formatTasksExportForDay,
 } from "@/lib/task-export"
-import { taskByActivityId } from "@/lib/tasks"
+import { taskByActivityId, taskDate } from "@/lib/tasks"
 import type { Activity } from "@/lib/types"
 
 const RANGE_TABS: { id: HomeRange; label: string }[] = [
@@ -76,6 +77,21 @@ export default function AgendaPage() {
       return a.title.localeCompare(b.title, "it")
     })
   }, [groups.tasksInRange, store.activities, store.tasks])
+
+  const dayGroups = useMemo(() => {
+    const byDay = new Map<string, Activity[]>()
+    for (const activity of tasksActivities) {
+      const task = taskByActivityId(store.tasks, activity.id)
+      if (!task) continue
+      const day = taskDate(task.startsAt)
+      const list = byDay.get(day)
+      if (list) list.push(activity)
+      else byDay.set(day, [activity])
+    }
+    return [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, activities]) => ({ day, activities }))
+  }, [tasksActivities, store.tasks])
 
   function onStatus(
     id: string,
@@ -168,18 +184,29 @@ export default function AgendaPage() {
         </p>
       )}
 
-      <ActivityList
-        activities={tasksActivities}
-        projects={store.projects}
-        density="dense"
-        showTaskSlot
-        onOpen={setSelected}
-        onStatus={onStatus}
-        onDelete={onDelete}
-        emptyTitle="Nessun task"
-        emptyDescription="Non ci sono esecuzioni pianificate in queste date."
-      />
-
+      <div className="space-y-8">
+        {dayGroups.map(({ day, activities }) => (
+          <section key={day} className="space-y-3">
+            <h2 className="font-heading text-lg font-semibold tracking-tight capitalize">
+              {day === today ? `Oggi · ${formatLongDateIT(day)}` : formatLongDateIT(day)}
+              <span className="ml-2 text-sm font-medium text-muted-foreground">
+                {activities.length}
+              </span>
+            </h2>
+            <ActivityList
+              activities={activities}
+              projects={store.projects}
+              density="dense"
+              showTaskSlot
+              onOpen={setSelected}
+              onStatus={onStatus}
+              onDelete={onDelete}
+              emptyTitle="Nessun task"
+              emptyDescription="Non ci sono esecuzioni pianificate in questo giorno."
+            />
+          </section>
+        ))}
+      </div>
       <ActivityDialog
         open={Boolean(selected)}
         onOpenChange={(open) => {
