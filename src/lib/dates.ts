@@ -15,7 +15,7 @@ export function addDaysISO(days: number, from = new Date()): string {
   return toISODate(next)
 }
 
-export const HOME_RANGES = ["oggi", "settimana", "7giorni", "sempre"] as const
+export const HOME_RANGES = ["oggi", "settimana", "sempre"] as const
 export type HomeRange = (typeof HOME_RANGES)[number]
 
 export function isHomeRange(value: string): value is HomeRange {
@@ -42,8 +42,6 @@ export function homeRangeBounds(
       return { from: today, to: today }
     case "settimana":
       return { from: startOfWeekMonday(today), to: endOfWeekSunday(today) }
-    case "7giorni":
-      return { from: today, to: addDaysISO(6, parseISODate(today)) }
     case "sempre":
       return { from: null, to: null }
   }

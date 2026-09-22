@@ -5,7 +5,6 @@ import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
 import { AppSelect } from "@/components/app-select"
-import { CaptureBar } from "@/components/capture-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -127,8 +126,6 @@ export default function AttivitaPage() {
         </div>
         <Button onClick={() => setCreating(true)}>Nuova attività</Button>
       </header>
-
-      <CaptureBar />
 
       <div
         className={`grid gap-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10 sm:grid-cols-2 ${

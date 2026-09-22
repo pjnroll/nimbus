@@ -62,7 +62,11 @@ export function activitiesWithTaskInRange(
 }
 
 export function sortTasksByStartsAt(tasks: Task[]): Task[] {
-  return [...tasks].sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+  return [...tasks].sort((a, b) => {
+    const byStart = a.startsAt.localeCompare(b.startsAt)
+    if (byStart !== 0) return byStart
+    return a.activityId.localeCompare(b.activityId)
+  })
 }
 
 export function homePeriodGroups(

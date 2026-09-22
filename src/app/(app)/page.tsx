@@ -14,14 +14,14 @@ import {
   todayISO,
   type HomeRange,
 } from "@/lib/dates"
-import { homePeriodGroups } from "@/lib/selectors"
+import { homePeriodGroups, sortTasksByStartsAt } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
+import { taskByActivityId } from "@/lib/tasks"
 import type { Activity } from "@/lib/types"
 
 const RANGE_TABS: { id: HomeRange; label: string }[] = [
   { id: "oggi", label: "Oggi" },
   { id: "settimana", label: "Questa settimana" },
-  { id: "7giorni", label: "Prossimi 7 giorni" },
   { id: "sempre", label: "Sempre" },
 ]
 
@@ -29,17 +29,15 @@ function headingForRange(range: HomeRange): string {
   const hello = greetingForNow()
   switch (range) {
     case "oggi":
-      return `${hello}. Questa è la giornata.`
+      return `${hello}. Agenda di oggi.`
     case "settimana":
-      return `${hello}. Questa è la settimana.`
-    case "7giorni":
-      return `${hello}. I prossimi sette giorni.`
+      return `${hello}. Agenda della settimana.`
     case "sempre":
-      return `${hello}. Tutti i task.`
+      return `${hello}. Tutta l’agenda.`
   }
 }
 
-export default function OggiPage() {
+export default function AgendaPage() {
   const { store, updateActivity, deleteActivity } = useNimbus()
   const [selected, setSelected] = useState<Activity | null>(null)
   const [range, setRange] = useState<HomeRange>("settimana")
@@ -51,10 +49,22 @@ export default function OggiPage() {
     [store.activities, store.tasks, from, to, today],
   )
   const tasksActivities = useMemo(() => {
-    return groups.tasksInRange
-      .map((task) => store.activities.find((activity) => activity.id === task.activityId))
+    const ordered = sortTasksByStartsAt(groups.tasksInRange)
+    const activities = ordered
+      .map((task) =>
+        store.activities.find((activity) => activity.id === task.activityId),
+      )
       .filter((activity): activity is Activity => Boolean(activity))
-  }, [groups.tasksInRange, store.activities])
+    return [...activities].sort((a, b) => {
+      const taskA = taskByActivityId(store.tasks, a.id)
+      const taskB = taskByActivityId(store.tasks, b.id)
+      const startA = taskA?.startsAt ?? ""
+      const startB = taskB?.startsAt ?? ""
+      const byStart = startA.localeCompare(startB)
+      if (byStart !== 0) return byStart
+      return a.title.localeCompare(b.title, "it")
+    })
+  }, [groups.tasksInRange, store.activities, store.tasks])
 
   function onStatus(
     id: string,
@@ -81,7 +91,7 @@ export default function OggiPage() {
             {headingForRange(range)}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            I task pianificati in questa finestra, ordinati per data e ora.
+            I task in agenda in questa finestra, in ordine cronologico.
           </p>
         </div>
         <Tabs

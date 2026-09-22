@@ -24,7 +24,7 @@ import { resetClientStore, useNimbus } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 const NAV = [
-  { href: "/", label: "Oggi", icon: CalendarDaysIcon },
+  { href: "/", label: "Agenda", icon: CalendarDaysIcon },
   { href: "/attivita", label: "Attività", icon: ListTodoIcon },
   { href: "/progetti", label: "Progetti", icon: FolderKanbanIcon },
 ]
