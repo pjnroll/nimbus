@@ -223,13 +223,14 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
     requesterId: typeof raw.requesterId === "string" ? raw.requesterId : null,
     type: raw.type === "coordino" ? "coordino" : "eseguo",
     status:
-      raw.status === "inbox" ||
-      raw.status === "in_corso" ||
-      raw.status === "in_attesa" ||
-      raw.status === "fatto" ||
-      raw.status === "fallita"
-        ? raw.status
-        : "inbox",
+      raw.status === "inbox"
+        ? "in_attesa"
+        : raw.status === "in_corso" ||
+            raw.status === "in_attesa" ||
+            raw.status === "fatto" ||
+            raw.status === "fallita"
+          ? raw.status
+          : "in_attesa",
     priority:
       raw.priority === "alta" || raw.priority === "bassa" ? raw.priority : "media",
     waitingOnPersonId:

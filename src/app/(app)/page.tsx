@@ -135,7 +135,7 @@ export default function AgendaPage() {
             {headingForRange(range)}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            I task in agenda in questa finestra, in ordine cronologico.
+            I tuoi impegni nel periodo scelto, giorno per giorno.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -170,10 +170,9 @@ export default function AgendaPage() {
 
       {tasksActivities.length === 0 ? (
         <Alert>
-          <AlertTitle>Nessun task in queste date</AlertTitle>
+          <AlertTitle>Nessun impegno in queste date</AlertTitle>
           <AlertDescription>
-            Pianifica un’esecuzione dal dialog di un’attività, oppure allarga
-            la finestra temporale.
+            Allarga il periodo oppure pianifica un’attività.
           </AlertDescription>
         </Alert>
       ) : (

@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { CategoryBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/status-badges"
 import { todayISO } from "@/lib/dates"
-import { SOURCE_LABELS } from "@/lib/labels"
 import { categoryName } from "@/lib/categories"
 import { personName, personNames } from "@/lib/people"
 import { projectBorderClass } from "@/lib/project-color"
@@ -64,12 +63,10 @@ export function ActivityCard({
   const [expanded, setExpanded] = useState(false)
   const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
-  const waitingOnName = personName(store.people, activity.waitingOnPersonId)
   const taskPeople = task ? personNames(store.people, task.personIds) : ""
   const categoryLabel = categoryName(project, activity.categoryId)
   const overdue =
     !closedActivity(activity.status) &&
-    activity.status !== "inbox" &&
     Boolean(task && isTaskOverdue(task, todayISO()))
   const dense = density === "dense"
   const showDetails = !dense || expanded
@@ -144,11 +141,6 @@ export function ActivityCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onOpen}>Apri e modifica</DropdownMenuItem>
-            {activity.status === "inbox" ? (
-              <DropdownMenuItem onClick={() => onStatus("in_corso")}>
-                Prendi in carico
-              </DropdownMenuItem>
-            ) : null}
             {!closedActivity(activity.status) && activity.status !== "in_corso" ? (
               <DropdownMenuItem onClick={() => onStatus("in_corso")}>
                 Segna in corso
@@ -156,7 +148,7 @@ export function ActivityCard({
             ) : null}
             {!closedActivity(activity.status) && activity.status !== "in_attesa" ? (
               <DropdownMenuItem onClick={() => onStatus("in_attesa")}>
-                Metti in attesa
+                Da pianificare
               </DropdownMenuItem>
             ) : null}
             {!closedActivity(activity.status) ? (
@@ -229,26 +221,21 @@ export function ActivityCard({
                 Chiusura: {activity.closingNote}
               </p>
             ) : null}
-            <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <div>
-                <dt className="sr-only">Origine</dt>
-                <dd>
-                  {SOURCE_LABELS[activity.source]}
-                  {requesterName ? ` · ${requesterName}` : ""}
-                </dd>
-              </div>
-              {!project ? (
-                <div>
-                  <dt className="sr-only">Progetto</dt>
-                  <dd>Senza progetto</dd>
-                </div>
-              ) : null}
-            </dl>
-            {activity.status === "in_attesa" && waitingOnName ? (
-              <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-950">
-                In attesa di <span className="font-medium">{waitingOnName}</span>
-                {activity.waitingReason ? ` — ${activity.waitingReason}` : ""}
-              </p>
+            {requesterName || !project ? (
+              <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {requesterName ? (
+                  <div>
+                    <dt className="sr-only">Richiedente</dt>
+                    <dd>{requesterName}</dd>
+                  </div>
+                ) : null}
+                {!project ? (
+                  <div>
+                    <dt className="sr-only">Progetto</dt>
+                    <dd>Senza progetto</dd>
+                  </div>
+                ) : null}
+              </dl>
             ) : null}
           </button>
           {activity.attachments.length > 0 ? (

@@ -71,7 +71,7 @@ const projects: Project[] = [
       { id: "cat-qa-infra", name: "Infrastruttura" },
     ],
     notes:
-      "Richieste spot di accessi e collaudi. Tenerle in inbox e smistarle senza aprire un nuovo progetto ogni volta.",
+      "Richieste spot di accessi e collaudi. Tenerle da pianificare senza aprire un nuovo progetto ogni volta.",
     createdAt: created,
     updatedAt: created,
   },
@@ -79,15 +79,15 @@ const projects: Project[] = [
 
 const activities: Activity[] = [
   {
-    id: "act-inbox-rimini",
+    id: "act-plan-rimini",
     title: "Nuovo ambiente di collaudo per il Comune di Rimini",
     description:
-      "Email del commerciale: serve un ambiente QA isolato entro la prossima sprint. Verificare se rientra in Tributi o in un progetto a parte.",
+      "Serve un ambiente QA isolato entro la prossima sprint. Verificare se rientra in Tributi o in un progetto a parte.",
     projectId: null,
-    source: "email",
+    source: "altro",
     requesterId: "ppl-paolo",
     type: "eseguo",
-    status: "inbox",
+    status: "in_attesa",
     priority: "alta",
     waitingOnPersonId: null,
     waitingReason: "",
@@ -99,15 +99,15 @@ const activities: Activity[] = [
     updatedAt: created,
   },
   {
-    id: "act-inbox-iam",
+    id: "act-plan-iam",
     title: "Accessi IAM al bucket backup-dev",
     description:
-      "Messaggio Teams: tre sviluppatori non vedono gli oggetti del bucket. Probabile policy errata sul ruolo di QA.",
+      "Tre sviluppatori non vedono gli oggetti del bucket. Probabile policy errata sul ruolo di QA.",
     projectId: "prj-qa",
-    source: "chat",
+    source: "altro",
     requesterId: "ppl-giulia",
     type: "eseguo",
-    status: "inbox",
+    status: "in_attesa",
     priority: "media",
     waitingOnPersonId: null,
     waitingReason: "",

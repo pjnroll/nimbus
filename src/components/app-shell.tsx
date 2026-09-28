@@ -88,7 +88,7 @@ function Brand() {
             Nimbus
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Laviano · Cloud PM
+            Laviano
           </p>
         </div>
       </div>

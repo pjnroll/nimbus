@@ -416,7 +416,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       const result = upsertTaskInStore(current, input)
       let next = result.store
-      if (activity.status === "inbox") {
+      if (activity.status === "inbox" || activity.status === "in_attesa") {
         next = {
           ...next,
           activities: next.activities.map((item) =>

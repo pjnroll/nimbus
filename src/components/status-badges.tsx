@@ -9,7 +9,7 @@ export function StatusBadge({ status }: { status: ActivityStatus }) {
   const styles: Record<ActivityStatus, string> = {
     inbox: "border-blue-200 bg-blue-50 text-blue-800",
     in_corso: "border-slate-200 bg-slate-50 text-slate-700",
-    in_attesa: "border-amber-200 bg-amber-50 text-amber-900",
+    in_attesa: "border-blue-200 bg-blue-50 text-blue-800",
     fatto: "border-green-200 bg-green-50 text-green-800",
     fallita: "border-red-200 bg-red-50 text-red-800",
   }

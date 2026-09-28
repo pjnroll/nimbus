@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
   PRIORITY_LABELS,
-  SOURCE_LABELS,
   STATUS_LABELS,
   TYPE_LABELS,
 } from "@/lib/labels"
@@ -40,6 +39,13 @@ import {
   type ActivityType,
   type Priority,
 } from "@/lib/types"
+
+const DIALOG_STATUSES: ActivityStatus[] = [
+  "in_attesa",
+  "in_corso",
+  "fatto",
+  "fallita",
+]
 
 type FormState = {
   title: string
@@ -67,10 +73,10 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   title: "",
   description: "",
   projectId: NONE_PROJECT,
-  source: "email",
+  source: "altro",
   requesterId: null,
   type: "eseguo",
-  status: "inbox",
+  status: "in_attesa",
   priority: "media",
   waitingOnPersonId: null,
   waitingReason: "",
@@ -90,14 +96,16 @@ function fromActivity(
   activity: Activity,
   task: ReturnType<typeof taskByActivityId>,
 ): FormState {
+  const status =
+    activity.status === "inbox" ? "in_attesa" : activity.status
   return {
     title: activity.title,
     description: activity.description,
     projectId: activity.projectId ?? NONE_PROJECT,
-    source: activity.source,
+    source: activity.source || "altro",
     requesterId: activity.requesterId,
     type: activity.type,
-    status: activity.status,
+    status,
     priority: activity.priority,
     waitingOnPersonId: activity.waitingOnPersonId,
     waitingReason: activity.waitingReason,
@@ -223,7 +231,7 @@ function ActivityDialogForm({
       source: form.source,
       requesterId: form.requesterId,
       type: form.type,
-      status: form.status,
+      status: form.status === "inbox" ? "in_attesa" : form.status,
       priority: form.priority,
       waitingOnPersonId: form.waitingOnPersonId,
       waitingReason: form.waitingReason.trim(),
@@ -285,7 +293,7 @@ function ActivityDialogForm({
           id="act-title"
           value={form.title}
           onChange={(event) => patch("title", event.target.value)}
-          placeholder="Cosa ti hanno chiesto?"
+          placeholder="Titolo dell'attività"
           className={heroInputClass}
           aria-label="Titolo"
         />
@@ -297,32 +305,20 @@ function ActivityDialogForm({
               id="act-desc"
               value={form.description}
               onChange={(event) => patch("description", event.target.value)}
-              placeholder="Contesto dalla mail o dalla chat"
+              placeholder="Dettagli o contesto"
             />
           </FormField>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="Origine">
-              <AppSelect
-                value={form.source}
-                onChange={(value) => patch("source", value as ActivitySource)}
-                options={Object.entries(SOURCE_LABELS).map(([value, label]) => ({
-                  value,
-                  label,
-                }))}
-              />
-            </FormField>
-            <FormField label="Richiedente" htmlFor="act-req">
-              <PersonField
-                id="act-req"
-                people={store.people}
-                value={form.requesterId ? [form.requesterId] : []}
-                onChange={(ids) => patch("requesterId", ids[0] ?? null)}
-                onCreate={upsertPerson}
-                multiple={false}
-                placeholder="Chi te l'ha chiesto"
-              />
-            </FormField>
-          </div>
+          <FormField label="Richiedente" htmlFor="act-req">
+            <PersonField
+              id="act-req"
+              people={store.people}
+              value={form.requesterId ? [form.requesterId] : []}
+              onChange={(ids) => patch("requesterId", ids[0] ?? null)}
+              onCreate={upsertPerson}
+              multiple={false}
+              placeholder="Nome del richiedente"
+            />
+          </FormField>
           <FormField label="Link Drive" htmlFor="act-drive">
             <Input
               id="act-drive"
@@ -387,8 +383,8 @@ function ActivityDialogForm({
                 {form.projectId !== NONE_PROJECT ? (
                   <Button
                     type="button"
-                    variant="outline"
-                    className="w-full justify-center sm:w-auto"
+                    variant="default"
+                    className="w-full justify-center"
                     onClick={() => {
                       onOpenChange(false)
                       router.push(`/progetti/${form.projectId}`)
@@ -429,11 +425,11 @@ function ActivityDialogForm({
               </FormField>
               <FormField label="Stato">
                 <AppSelect
-                  value={form.status}
+                  value={form.status === "inbox" ? "in_attesa" : form.status}
                   onChange={(value) => patch("status", value as ActivityStatus)}
-                  options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                  options={DIALOG_STATUSES.map((value) => ({
                     value,
-                    label,
+                    label: STATUS_LABELS[value],
                   }))}
                 />
               </FormField>
@@ -448,32 +444,6 @@ function ActivityDialogForm({
                 />
               </FormField>
             </div>
-            {form.status === "in_attesa" ? (
-              <div className="grid gap-3 rounded-lg bg-amber-50 p-3 sm:grid-cols-2">
-                <FormField label="In attesa di" htmlFor="act-wait">
-                  <PersonField
-                    id="act-wait"
-                    people={store.people}
-                    value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
-                    onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
-                    onCreate={upsertPerson}
-                    multiple={false}
-                    suggestIds={projectPeople}
-                    placeholder="Nome o team"
-                  />
-                </FormField>
-                <FormField label="Perché è fermo" htmlFor="act-reason">
-                  <Input
-                    id="act-reason"
-                    value={form.waitingReason}
-                    onChange={(event) =>
-                      patch("waitingReason", event.target.value)
-                    }
-                    placeholder="Cosa manca"
-                  />
-                </FormField>
-              </div>
-            ) : null}
             {form.status === "fatto" || form.status === "fallita" ? (
               <FormField label="Nota di chiusura" htmlFor="act-closing">
                 <Textarea
@@ -538,7 +508,7 @@ function ActivityDialogForm({
                     id="task-notes"
                     value={form.taskNotes}
                     onChange={(event) => patch("taskNotes", event.target.value)}
-                    placeholder="Es. call su rightsizing"
+                    placeholder="Nota per questo slot"
                   />
                 </FormField>
                 <Button

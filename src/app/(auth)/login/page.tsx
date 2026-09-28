@@ -96,8 +96,7 @@ function LoginCard() {
         </div>
         <CardTitle className="text-2xl">Accedi</CardTitle>
         <CardDescription>
-          Entra con Google. La tua scrivania resta sul server, isolata dagli
-          altri account.
+          Benvenuto. Accedi con Google per continuare.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">

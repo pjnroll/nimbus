@@ -7,9 +7,9 @@ import type {
 } from "@/lib/types"
 
 export const STATUS_LABELS: Record<ActivityStatus, string> = {
-  inbox: "Inbox",
+  inbox: "Da pianificare",
   in_corso: "In corso",
-  in_attesa: "In attesa",
+  in_attesa: "Da pianificare",
   fatto: "Fatto",
   fallita: "Fallita",
 }

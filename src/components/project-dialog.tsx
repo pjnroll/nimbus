@@ -225,7 +225,7 @@ function ProjectDialogForm({
               id="prj-notes"
               value={form.notes}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
-              placeholder="Contesto che nel foglio finiva in una colonna infinita"
+              placeholder="Obiettivi, contatti utili, contesto"
             />
           </FormField>
         </FormSection>

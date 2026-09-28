@@ -128,8 +128,8 @@ export default function ProgettiPage() {
             Progetti
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Cerca, filtra e ordina. Ogni progetto raggruppa le attività aperte e
-            il link Drive.
+            I tuoi progetti: apri uno per vedere le attività e la cartella
+            condivisa.
           </p>
         </div>
         <Button onClick={() => setCreating(true)}>Nuovo progetto</Button>

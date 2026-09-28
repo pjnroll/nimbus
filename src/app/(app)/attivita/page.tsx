@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
@@ -23,12 +24,26 @@ import {
 
 const ALL = "__all__"
 
-const BOARD_STATUSES: ActivityStatus[] = [
-  "in_corso",
+const BOARD_STATUSES = [
   "in_attesa",
+  "in_corso",
+  "fatto",
+  "fallita",
+] as const satisfies readonly ActivityStatus[]
+
+const FILTER_STATUSES: ActivityStatus[] = [
+  "in_attesa",
+  "in_corso",
   "fatto",
   "fallita",
 ]
+
+const DEFAULT_OPEN: Record<(typeof BOARD_STATUSES)[number], boolean> = {
+  in_attesa: true,
+  in_corso: true,
+  fatto: false,
+  fallita: false,
+}
 
 export default function AttivitaPage() {
   const { store, updateActivity, deleteActivity } = useNimbus()
@@ -39,10 +54,12 @@ export default function AttivitaPage() {
   const [categoryId, setCategoryId] = useState(ALL)
   const [selected, setSelected] = useState<Activity | null>(null)
   const [creating, setCreating] = useState(false)
+  const [openColumns, setOpenColumns] = useState(DEFAULT_OPEN)
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
     const list = store.activities.filter((activity) => {
+      if (activity.status === "inbox") return false
       if (status !== ALL && activity.status !== status) return false
       if (type !== ALL && activity.type !== type) return false
       if (projectId === NONE_PROJECT && activity.projectId) return false
@@ -112,6 +129,13 @@ export default function AttivitaPage() {
     toast.success("Attività eliminata")
   }
 
+  function toggleColumn(column: (typeof BOARD_STATUSES)[number]) {
+    setOpenColumns((current) => ({
+      ...current,
+      [column]: !current[column],
+    }))
+  }
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -120,8 +144,8 @@ export default function AttivitaPage() {
             Attività
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Filtra per ciò che fai tu e ciò che stai coordinando. Apri una
-            scheda per pianificare il task di esecuzione.
+            Organizza il lavoro per stato. Apri una scheda per i dettagli e la
+            pianificazione.
           </p>
         </div>
         <Button onClick={() => setCreating(true)}>Nuova attività</Button>
@@ -142,9 +166,9 @@ export default function AttivitaPage() {
           onChange={setStatus}
           options={[
             { value: ALL, label: "Tutti gli stati" },
-            ...Object.entries(STATUS_LABELS).map(([value, label]) => ({
+            ...FILTER_STATUSES.map((value) => ({
               value,
-              label,
+              label: STATUS_LABELS[value],
             })),
           ]}
         />
@@ -215,25 +239,38 @@ export default function AttivitaPage() {
               const columnActivities = filtered.filter(
                 (activity) => activity.status === column,
               )
+              const open = openColumns[column]
               return (
                 <div key={column} className="min-w-0 space-y-2">
-                  <h2 className="font-heading flex items-baseline gap-2 text-lg font-semibold tracking-tight">
-                    <span>{STATUS_LABELS[column]}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleColumn(column)}
+                    className="font-heading flex w-full items-center gap-2 text-left text-lg font-semibold tracking-tight"
+                    aria-expanded={open}
+                  >
+                    {open ? (
+                      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="flex-1">{STATUS_LABELS[column]}</span>
                     <span className="text-sm font-medium text-muted-foreground">
                       {columnActivities.length}
                     </span>
-                  </h2>
-                  <ActivityList
-                    activities={columnActivities}
-                    projects={store.projects}
-                    density="dense"
-                    compactEmpty
-                    onOpen={setSelected}
-                    onStatus={onStatus}
-                    onDelete={onDelete}
-                    emptyTitle="Vuota"
-                    emptyDescription="Niente in questa colonna con i filtri attuali."
-                  />
+                  </button>
+                  {open ? (
+                    <ActivityList
+                      activities={columnActivities}
+                      projects={store.projects}
+                      density="dense"
+                      compactEmpty
+                      onOpen={setSelected}
+                      onStatus={onStatus}
+                      onDelete={onDelete}
+                      emptyTitle="Vuota"
+                      emptyDescription="Niente in questa colonna con i filtri attuali."
+                    />
+                  ) : null}
                 </div>
               )
             })}
@@ -252,7 +289,7 @@ export default function AttivitaPage() {
         open={creating}
         onOpenChange={setCreating}
         heading="Nuova attività"
-        defaults={{ status: "in_corso" }}
+        defaults={{ status: "in_attesa" }}
       />
     </div>
   )
