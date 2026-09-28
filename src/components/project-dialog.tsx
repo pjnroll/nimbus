@@ -159,7 +159,7 @@ function ProjectDialogForm({
           aria-label="Nome"
         />
       </DialogHeader>
-      <div className="grid max-h-[min(70vh,42rem)] gap-6 overflow-y-auto pr-1 md:grid-cols-2">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto pr-1 md:grid-cols-2 sm:max-h-[min(70vh,42rem)] sm:flex-none">
         <FormSection title="Scheda">
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField label="Cliente / ambito" htmlFor="prj-client">
@@ -172,8 +172,9 @@ function ProjectDialogForm({
                 placeholder="Area, ente, pratica"
               />
             </FormField>
-            <FormField label="Stato">
+            <FormField label="Stato" htmlFor="prj-status">
               <AppSelect
+                id="prj-status"
                 value={form.status}
                 onChange={(value) =>
                   setForm({ ...form, status: value as ProjectStatus })
@@ -197,7 +198,7 @@ function ProjectDialogForm({
                     title={option.label}
                     onClick={() => setForm({ ...form, color: option.id })}
                     className={cn(
-                      "size-7 rounded-full ring-offset-2 transition-shadow",
+                      "size-9 rounded-full ring-offset-2 transition-shadow",
                       option.swatchClass,
                       selected
                         ? "ring-2 ring-foreground"

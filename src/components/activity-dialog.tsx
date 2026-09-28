@@ -298,7 +298,7 @@ function ActivityDialogForm({
           aria-label="Titolo"
         />
       </DialogHeader>
-      <div className="grid max-h-[min(70vh,42rem)] gap-6 overflow-y-auto pr-1 md:grid-cols-2">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto pr-1 md:grid-cols-2 sm:max-h-[min(70vh,42rem)] sm:flex-none">
         <FormSection title="Contesto">
           <FormField label="Note" htmlFor="act-desc">
             <Textarea
@@ -350,9 +350,10 @@ function ActivityDialogForm({
         </FormSection>
         <div className="grid content-start gap-6">
           <FormSection title="Piano">
-            <FormField label="Progetto">
+            <FormField label="Progetto" htmlFor="act-project">
               <div className="grid gap-1.5">
                 <AppSelect
+                  id="act-project"
                   value={form.projectId}
                   onChange={(value) => {
                     setForm((current) => {
@@ -413,8 +414,9 @@ function ActivityDialogForm({
               </FormField>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Tipo">
+              <FormField label="Tipo" htmlFor="act-type">
                 <AppSelect
+                  id="act-type"
                   value={form.type}
                   onChange={(value) => patch("type", value as ActivityType)}
                   options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
@@ -423,8 +425,9 @@ function ActivityDialogForm({
                   }))}
                 />
               </FormField>
-              <FormField label="Stato">
+              <FormField label="Stato" htmlFor="act-status">
                 <AppSelect
+                  id="act-status"
                   value={form.status === "inbox" ? "in_attesa" : form.status}
                   onChange={(value) => patch("status", value as ActivityStatus)}
                   options={DIALOG_STATUSES.map((value) => ({
@@ -433,8 +436,9 @@ function ActivityDialogForm({
                   }))}
                 />
               </FormField>
-              <FormField label="Priorità">
+              <FormField label="Priorità" htmlFor="act-priority">
                 <AppSelect
+                  id="act-priority"
                   value={form.priority}
                   onChange={(value) => patch("priority", value as Priority)}
                   options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({

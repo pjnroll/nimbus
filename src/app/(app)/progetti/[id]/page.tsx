@@ -162,7 +162,7 @@ export default function ProjectDetailPage({
           <div className="flex flex-wrap gap-1.5">
             <Button
               type="button"
-              size="xs"
+              size="sm"
               variant={categoryFilter === ALL ? "default" : "outline"}
               onClick={() => setCategoryFilter(ALL)}
             >
@@ -170,7 +170,7 @@ export default function ProjectDetailPage({
             </Button>
             <Button
               type="button"
-              size="xs"
+              size="sm"
               variant={categoryFilter === NONE_CATEGORY ? "default" : "outline"}
               onClick={() => setCategoryFilter(NONE_CATEGORY)}
             >
@@ -180,7 +180,7 @@ export default function ProjectDetailPage({
               <Button
                 key={category.id}
                 type="button"
-                size="xs"
+                size="sm"
                 variant={categoryFilter === category.id ? "default" : "outline"}
                 onClick={() => setCategoryFilter(category.id)}
               >

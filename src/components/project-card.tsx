@@ -52,7 +52,7 @@ export function ProjectRow({
       ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="ghost" size="icon-sm" className="shrink-0" />}
+          render={<Button variant="ghost" size="icon" className="shrink-0" />}
         >
           <MoreHorizontalIcon />
           <span className="sr-only">Azioni</span>

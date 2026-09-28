@@ -23,7 +23,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <Toaster position="bottom-right" theme="light" richColors />
+        <Toaster
+          position="bottom-center"
+          theme="light"
+          richColors
+          offset={24}
+          mobileOffset={24}
+        />
       </body>
     </html>
   )

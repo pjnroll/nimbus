@@ -133,7 +133,7 @@ export function ActivityCard({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="ghost" size="icon-sm" className="shrink-0" />
+              <Button variant="ghost" size="icon" className="shrink-0" />
             }
           >
             <MoreHorizontalIcon />
@@ -269,7 +269,7 @@ export function ActivityCard({
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             aria-expanded={expanded}
             aria-label={expanded ? "Comprimi scheda" : "Espandi scheda"}
             onClick={(event) => {
