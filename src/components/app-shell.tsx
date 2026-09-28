@@ -23,16 +23,65 @@ import {
 import { resetClientStore, useNimbus } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
+/** Runtime fingerprint for hydration/cache debug — must match client+server bundle. */
+const NAV_BUILD = "nav-v2-min-h-11"
+
 const NAV = [
   { href: "/", label: "Agenda", icon: CalendarDaysIcon },
   { href: "/attivita", label: "Attività", icon: ListTodoIcon },
   { href: "/progetti", label: "Progetti", icon: FolderKanbanIcon },
 ]
 
+function debugHydrationLog(
+  hypothesisId: string,
+  message: string,
+  data: Record<string, unknown>,
+) {
+  // #region agent log
+  fetch("/api/debug-log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId: "b36c36",
+      hypothesisId,
+      location: "app-shell.tsx",
+      message,
+      data: { ...data, navBuild: NAV_BUILD },
+      timestamp: Date.now(),
+      runId: "hydrate-1",
+    }),
+  }).catch(() => {})
+  // #endregion
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { hydrated } = useNimbus()
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    // #region agent log
+    const navClass =
+      "flex min-h-11 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+    debugHydrationLog("A", "client-bundle-fingerprint", {
+      hasMinH11: navClass.includes("min-h-11"),
+      hasPy25: navClass.includes("py-2.5"),
+      navClassSample: navClass.slice(0, 80),
+      userAgent: navigator.userAgent.slice(0, 120),
+      href: window.location.href,
+    })
+    // #endregion
+  }, [])
+
+  useEffect(() => {
+    // #region agent log
+    debugHydrationLog("B", "hydration-shell-state", {
+      storeHydrated: hydrated,
+      pathname,
+      sheetOpen: open,
+    })
+    // #endregion
+  }, [hydrated, pathname, open])
 
   return (
     <div className="flex min-h-full bg-background">
