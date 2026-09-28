@@ -16,8 +16,9 @@ function localDevOrigins(): string[] {
   const hosts = new Set(["127.0.0.1", "localhost", ...extraDevOrigins()])
   for (const addrs of Object.values(os.networkInterfaces())) {
     for (const addr of addrs ?? []) {
-      const family = addr.family
-      if (family !== "IPv4" && family !== 4) continue
+      // Node types vary: family may be "IPv4" | "IPv6" or legacy numeric 4 | 6
+      const family = String(addr.family)
+      if (family !== "IPv4" && family !== "4") continue
       if (addr.internal) continue
       hosts.add(addr.address)
     }
