@@ -140,7 +140,7 @@ export default function AttivitaPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-semibold tracking-tight">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Attività
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
@@ -152,7 +152,7 @@ export default function AttivitaPage() {
       </header>
 
       <div
-        className={`grid gap-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10 sm:grid-cols-2 ${
+        className={`surface-panel grid gap-2 p-3 sm:grid-cols-2 ${
           selectedProject ? "lg:grid-cols-5" : "lg:grid-cols-4"
         }`}
       >

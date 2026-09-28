@@ -107,7 +107,7 @@ export default function ProgettiPage() {
 
   function renderList(projects: Project[]) {
     return (
-      <div className="divide-y divide-foreground/10 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+      <div className="divide-y divide-foreground/8 overflow-hidden rounded-2xl bg-card/90 shadow-sm ring-1 ring-foreground/8 backdrop-blur-sm">
         {projects.map((project) => (
           <ProjectRow
             key={project.id}
@@ -124,7 +124,7 @@ export default function ProgettiPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-semibold tracking-tight">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Progetti
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
@@ -145,7 +145,7 @@ export default function ProgettiPage() {
         </EmptyState>
       ) : (
         <>
-          <div className="grid gap-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10 sm:grid-cols-3">
+          <div className="surface-panel grid gap-2 p-3 sm:grid-cols-3">
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}

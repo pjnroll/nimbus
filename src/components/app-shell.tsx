@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { DataMenu } from "@/components/data-menu"
+import { ThemeSelector } from "@/components/theme-selector"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -23,81 +24,35 @@ import {
 import { resetClientStore, useNimbus } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
-/** Runtime fingerprint for hydration/cache debug — must match client+server bundle. */
-const NAV_BUILD = "nav-v2-min-h-11"
-
 const NAV = [
   { href: "/", label: "Agenda", icon: CalendarDaysIcon },
   { href: "/attivita", label: "Attività", icon: ListTodoIcon },
   { href: "/progetti", label: "Progetti", icon: FolderKanbanIcon },
 ]
 
-function debugHydrationLog(
-  hypothesisId: string,
-  message: string,
-  data: Record<string, unknown>,
-) {
-  // #region agent log
-  fetch("/api/debug-log", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: "b36c36",
-      hypothesisId,
-      location: "app-shell.tsx",
-      message,
-      data: { ...data, navBuild: NAV_BUILD },
-      timestamp: Date.now(),
-      runId: "hydrate-1",
-    }),
-  }).catch(() => {})
-  // #endregion
-}
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { hydrated } = useNimbus()
   const [open, setOpen] = useState(false)
 
-  useEffect(() => {
-    // #region agent log
-    const navClass =
-      "flex min-h-11 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
-    debugHydrationLog("A", "client-bundle-fingerprint", {
-      hasMinH11: navClass.includes("min-h-11"),
-      hasPy25: navClass.includes("py-2.5"),
-      navClassSample: navClass.slice(0, 80),
-      userAgent: navigator.userAgent.slice(0, 120),
-      href: window.location.href,
-    })
-    // #endregion
-  }, [])
-
-  useEffect(() => {
-    // #region agent log
-    debugHydrationLog("B", "hydration-shell-state", {
-      storeHydrated: hydrated,
-      pathname,
-      sheetOpen: open,
-    })
-    // #endregion
-  }, [hydrated, pathname, open])
-
   return (
-    <div className="flex min-h-full bg-background">
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm md:flex">
+    <div className="flex min-h-full">
+      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-sm backdrop-blur-md md:flex">
         <Brand />
         <Nav pathname={pathname} />
         <SidebarFooter />
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-2 border-b bg-background/90 px-4 py-3 backdrop-blur md:hidden">
+      <div className="flex min-w-0 flex-1 flex-col app-atmosphere">
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-foreground/8 bg-background/75 px-4 py-3 backdrop-blur-md md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger render={<Button variant="outline" size="icon" />}>
               <MenuIcon />
               <span className="sr-only">Apri menu</span>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground shadow-sm">
+            <SheetContent
+              side="left"
+              className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground shadow-lg"
+            >
               <SheetHeader className="sr-only">
                 <SheetTitle>Navigazione</SheetTitle>
               </SheetHeader>
@@ -106,12 +61,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarFooter />
             </SheetContent>
           </Sheet>
-          <div className="flex items-center gap-2 font-heading text-lg font-medium">
-            <CloudIcon className="size-5 text-primary" />
+          <div className="flex flex-1 items-center gap-2 font-heading text-lg font-semibold tracking-tight">
+            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary shadow-[0_0_0_1px] shadow-primary/20">
+              <CloudIcon className="size-4" />
+            </span>
             Nimbus
           </div>
+          <ThemeSelector side="bottom" className="text-foreground" />
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-7 sm:px-6 lg:px-8">
           {hydrated ? (
             children
           ) : (
@@ -127,16 +85,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function Brand() {
   return (
-    <div className="border-b border-sidebar-border px-5 py-5">
-      <div className="flex items-center gap-2">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+    <div className="border-b border-sidebar-border px-5 py-6">
+      <div className="flex items-center gap-3">
+        <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-[0_0_24px] shadow-[color:var(--surface-glow)] ring-1 ring-primary/25">
           <CloudIcon className="size-5" />
         </span>
         <div>
-          <p className="font-heading text-lg leading-none font-semibold tracking-tight">
+          <p className="font-heading text-xl leading-none font-semibold tracking-tight">
             Nimbus
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1.5 text-xs font-medium text-muted-foreground">
             Laviano
           </p>
         </div>
@@ -167,13 +125,18 @@ function Nav({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-11 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
               active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/75 hover:bg-muted hover:text-sidebar-foreground",
+                ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/15"
+                : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
             )}
           >
-            <Icon className="size-4" />
+            <Icon
+              className={cn(
+                "size-4",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
+            />
             <span className="flex-1">{item.label}</span>
           </Link>
         )
@@ -215,11 +178,17 @@ function SidebarFooter() {
 
   return (
     <div className="mt-auto space-y-2 border-t border-sidebar-border px-3 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate px-2 text-xs text-muted-foreground" title={email ?? undefined}>
+      <div className="flex items-center justify-between gap-1">
+        <p
+          className="min-w-0 truncate px-2 text-xs text-muted-foreground"
+          title={email ?? undefined}
+        >
           {email ?? "Dati salvati sul server"}
         </p>
-        <DataMenu />
+        <div className="flex items-center gap-0.5">
+          <ThemeSelector />
+          <DataMenu />
+        </div>
       </div>
       <Button
         variant="ghost"

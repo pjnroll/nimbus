@@ -128,24 +128,24 @@ export default function AgendaPage() {
     <div className="space-y-8">
       <header className="flex flex-col gap-4">
         <div>
-          <p className="text-sm text-muted-foreground capitalize">
+          <p className="text-sm font-medium text-muted-foreground capitalize">
             {formatRangeIT(from, to)}
           </p>
-          <h1 className="font-heading mt-1 text-3xl font-semibold tracking-tight">
+          <h1 className="font-heading mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
             {headingForRange(range)}
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             I tuoi impegni nel periodo scelto, giorno per giorno.
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="surface-panel flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <Tabs
             value={range}
             onValueChange={(next) => {
               if (typeof next === "string" && isHomeRange(next)) setRange(next)
             }}
           >
-            <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start sm:w-fit">
+            <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start bg-transparent sm:w-fit">
               {RANGE_TABS.map((tab) => (
                 <TabsTrigger key={tab.id} value={tab.id}>
                   {tab.label}

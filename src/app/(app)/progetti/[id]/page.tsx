@@ -76,9 +76,9 @@ export default function ProjectDetailPage({
   }
 
   const statusStyle: Record<typeof project.status, string> = {
-    attivo: "border-green-200 bg-green-50 text-green-800",
-    in_attesa: "border-amber-200 bg-amber-50 text-amber-900",
-    chiuso: "border-zinc-200 bg-zinc-100 text-zinc-600",
+    attivo: "border-badge-success/40 bg-badge-success text-badge-success-fg",
+    in_attesa: "border-badge-warn/40 bg-badge-warn text-badge-warn-fg",
+    chiuso: "border-badge-neutral/40 bg-badge-neutral text-badge-neutral-fg",
   }
 
   return (
@@ -90,7 +90,7 @@ export default function ProjectDetailPage({
         <span className="text-muted-foreground"> / </span>
         <span>{project.name}</span>
       </p>
-      <header className="flex flex-col gap-4 rounded-xl bg-card p-5 shadow-sm ring-1 ring-foreground/10 lg:flex-row lg:items-start lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-2xl bg-card/85 p-5 shadow-sm ring-1 ring-foreground/8 backdrop-blur-md lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <Badge variant="outline" className={cn("mb-2", statusStyle[project.status])}>
             {PROJECT_STATUS_LABELS[project.status]}

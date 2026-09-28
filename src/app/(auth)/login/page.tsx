@@ -86,15 +86,19 @@ function LoginCard() {
   }, [])
 
   return (
-    <Card className="w-full max-w-md shadow-md">
-      <CardHeader>
-        <div className="mb-2 flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <CloudIcon className="size-5" />
+    <Card className="w-full max-w-md border-foreground/8 bg-card/90 shadow-xl shadow-[color:var(--surface-glow)] ring-1 ring-foreground/10 backdrop-blur-md">
+      <CardHeader className="gap-3">
+        <div className="mb-1 flex items-center gap-3">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-[0_0_28px] shadow-[color:var(--surface-glow)] ring-1 ring-primary/25">
+            <CloudIcon className="size-6" />
           </span>
-          <p className="font-heading text-lg font-semibold">Nimbus</p>
+          <p className="font-heading text-2xl font-semibold tracking-tight">
+            Nimbus
+          </p>
         </div>
-        <CardTitle className="text-2xl">Accedi</CardTitle>
+        <CardTitle className="font-heading text-xl tracking-tight">
+          Accedi
+        </CardTitle>
         <CardDescription>
           Benvenuto. Accedi con Google per continuare.
         </CardDescription>

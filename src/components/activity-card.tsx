@@ -87,7 +87,7 @@ export function ActivityCard({
   return (
     <article
       className={cn(
-        "group relative min-w-0 overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-foreground/10 transition-shadow hover:shadow-md border-l-4",
+        "group relative min-w-0 overflow-hidden rounded-2xl border-l-4 bg-card/90 shadow-sm ring-1 ring-foreground/8 backdrop-blur-sm transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md hover:shadow-[color:var(--surface-glow)]",
         borderClass,
         dense ? "px-3 py-2" : "p-4",
       )}
