@@ -27,7 +27,7 @@ function debugThemeLog(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       sessionId: "b36c36",
-      runId: "theme-click-1",
+      runId: "theme-click-postfix",
       hypothesisId,
       location: "theme-selector.tsx",
       message,
@@ -98,7 +98,6 @@ export function ThemeSelector({
         <span className="sr-only">Aspetto e palette</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} side={side} className="w-52">
-        <DropdownMenuLabel>Aspetto</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={theme ?? "system"}
           onValueChange={(value) => {
@@ -110,6 +109,7 @@ export function ThemeSelector({
             }
           }}
         >
+          <DropdownMenuLabel>Aspetto</DropdownMenuLabel>
           <DropdownMenuRadioItem value="light">
             <SunIcon className="size-4" />
             Chiaro
@@ -124,7 +124,6 @@ export function ThemeSelector({
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel>Palette</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={palette}
           onValueChange={(value) => {
@@ -140,6 +139,7 @@ export function ThemeSelector({
             }
           }}
         >
+          <DropdownMenuLabel>Palette</DropdownMenuLabel>
           {PALETTES.map((item) => (
             <DropdownMenuRadioItem key={item.id} value={item.id}>
               <span
