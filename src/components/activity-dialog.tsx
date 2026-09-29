@@ -1,15 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ExternalLinkIcon } from "lucide-react"
+import { CalendarIcon, ExternalLinkIcon } from "lucide-react"
+import { cn } from "cn"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
 import { ActivityAttachmentsField } from "@/components/activity-attachments"
 import { CategoryField } from "@/components/category-field"
 import { FormField, FormSection } from "@/components/form-section"
 import { PersonField } from "@/components/person-field"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,8 @@ import {
   TYPE_LABELS,
 } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
+import { buildGoogleCalendarEventUrl } from "@/lib/google-calendar"
+import { personNames } from "@/lib/people"
 import {
   buildStartsAt,
   taskByActivityId,
@@ -278,6 +281,42 @@ function ActivityDialogForm({
       ? []
       : (store.projects.find((project) => project.id === form.projectId)
           ?.personIds ?? [])
+
+  const googleCalendarUrl = useMemo(() => {
+    if (!form.taskPlanned || !form.taskDate) return null
+    const startsAt = buildStartsAt(form.taskDate, form.taskStart)
+    const endsAt = form.taskEnd.trim()
+      ? buildStartsAt(form.taskDate, form.taskEnd)
+      : null
+    const project =
+      form.projectId !== NONE_PROJECT
+        ? store.projects.find((item) => item.id === form.projectId)
+        : undefined
+    const titleBase = form.title.trim() || "Attività"
+    const eventTitle = project?.name
+      ? `${project.name} · ${titleBase}`
+      : titleBase
+    const withWho = personNames(store.people, form.taskPersonIds)
+    const detailsLines: string[] = []
+    if (form.description.trim()) {
+      detailsLines.push(form.description.trim())
+    }
+    if (form.taskNotes.trim()) {
+      detailsLines.push(`Nota slot: ${form.taskNotes.trim()}`)
+    }
+    if (withWho) {
+      detailsLines.push(`Con chi: ${withWho}`)
+    }
+    if (form.driveUrl.trim()) {
+      detailsLines.push(`Drive: ${form.driveUrl.trim()}`)
+    }
+    return buildGoogleCalendarEventUrl({
+      title: eventTitle,
+      startsAt,
+      endsAt,
+      detailsLines,
+    })
+  }, [form, store.projects, store.people])
   const savedAttachments = activity
     ? (store.activities.find((item) => item.id === activity.id)?.attachments ??
       activity.attachments)
@@ -515,6 +554,25 @@ function ActivityDialogForm({
                     placeholder="Nota per questo slot"
                   />
                 </FormField>
+                {form.taskDate && googleCalendarUrl ? (
+                  <div className="grid gap-1.5">
+                    <a
+                      href={googleCalendarUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        buttonVariants({ variant: "outline" }),
+                        "w-full justify-center sm:w-auto",
+                      )}
+                    >
+                      <CalendarIcon />
+                      Aggiungi al calendario
+                    </a>
+                    <p className="text-xs text-muted-foreground">
+                      Apre Google Calendar con titolo e orario già compilati.
+                    </p>
+                  </div>
+                ) : null}
                 <Button
                   type="button"
                   variant="ghost"
