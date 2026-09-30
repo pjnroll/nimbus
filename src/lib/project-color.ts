@@ -52,6 +52,7 @@ export const PROJECT_COLOR_OPTIONS: {
 ]
 
 const NO_PROJECT_BORDER = "border-l-slate-400"
+const NO_PROJECT_SWATCH = "bg-stone-400"
 
 function hashId(id: string): number {
   let hash = 0
@@ -88,5 +89,16 @@ export function projectBorderClass(
   return (
     PROJECT_COLOR_OPTIONS.find((option) => option.id === color)?.borderClass ??
     NO_PROJECT_BORDER
+  )
+}
+
+export function projectSwatchClass(
+  project: { id: string; color?: ProjectColorId } | null | undefined,
+): string {
+  if (!project) return NO_PROJECT_SWATCH
+  const color = coerceProjectColor(project.color, project.id)
+  return (
+    PROJECT_COLOR_OPTIONS.find((option) => option.id === color)?.swatchClass ??
+    NO_PROJECT_SWATCH
   )
 }

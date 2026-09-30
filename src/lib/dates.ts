@@ -15,7 +15,7 @@ export function addDaysISO(days: number, from = new Date()): string {
   return toISODate(next)
 }
 
-export const HOME_RANGES = ["oggi", "settimana", "sempre"] as const
+export const HOME_RANGES = ["oggi", "settimana", "mese", "sempre"] as const
 export type HomeRange = (typeof HOME_RANGES)[number]
 
 export function isHomeRange(value: string): value is HomeRange {
@@ -33,6 +33,38 @@ export function endOfWeekSunday(iso = todayISO()): string {
   return addDaysISO(6, parseISODate(startOfWeekMonday(iso)))
 }
 
+export function startOfMonth(iso = todayISO()): string {
+  const date = parseISODate(iso)
+  return toISODate(new Date(date.getFullYear(), date.getMonth(), 1))
+}
+
+export function endOfMonth(iso = todayISO()): string {
+  const date = parseISODate(iso)
+  return toISODate(new Date(date.getFullYear(), date.getMonth() + 1, 0))
+}
+
+export function addMonthsISO(months: number, iso = todayISO()): string {
+  const date = parseISODate(iso)
+  const day = date.getDate()
+  const next = new Date(date.getFullYear(), date.getMonth() + months, 1)
+  const last = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()
+  next.setDate(Math.min(day, last))
+  return toISODate(next)
+}
+
+/** Six weeks, Monday–Sunday, covering the month of `iso`. */
+export function monthGridDays(iso = todayISO()): string[] {
+  const start = startOfWeekMonday(startOfMonth(iso))
+  return Array.from({ length: 42 }, (_, index) => addDaysISO(index, parseISODate(start)))
+}
+
+export function formatMonthYearIT(iso: string): string {
+  return parseISODate(iso).toLocaleDateString("it-IT", {
+    month: "long",
+    year: "numeric",
+  })
+}
+
 export function homeRangeBounds(
   range: HomeRange,
   today = todayISO(),
@@ -42,6 +74,8 @@ export function homeRangeBounds(
       return { from: today, to: today }
     case "settimana":
       return { from: startOfWeekMonday(today), to: endOfWeekSunday(today) }
+    case "mese":
+      return { from: startOfMonth(today), to: endOfMonth(today) }
     case "sempre":
       return { from: null, to: null }
   }
