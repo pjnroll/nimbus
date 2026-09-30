@@ -69,7 +69,7 @@ export function sortTasksByStartsAt(tasks: Task[]): Task[] {
   })
 }
 
-/** Open planned tasks (not inbox, not closed), grouped by local calendar day. */
+/** Planned tasks grouped by local calendar day (open, fatto, fallita; not inbox). */
 export function tasksByDay(
   tasks: Task[],
   activities: Activity[],
@@ -79,7 +79,6 @@ export function tasksByDay(
   for (const task of sortTasksByStartsAt(tasks)) {
     const activity = byId.get(task.activityId)
     if (!activity || activity.status === "inbox") continue
-    if (closedActivity(activity.status)) continue
     const day = taskDate(task.startsAt)
     const list = grouped.get(day)
     if (list) list.push(task)

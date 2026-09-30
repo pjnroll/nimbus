@@ -11,7 +11,7 @@ import {
   todayISO,
 } from "@/lib/dates"
 import { projectSwatchClass } from "@/lib/project-color"
-import { isTaskOverdue, taskTime } from "@/lib/tasks"
+import { closedActivity, isTaskOverdue, taskTime } from "@/lib/tasks"
 import type { Activity, Project, Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -153,7 +153,9 @@ export function AgendaCalendar({
                     const project = activity.projectId
                       ? projectById.get(activity.projectId)
                       : undefined
-                    const overdue = isTaskOverdue(task, today)
+                    const overdue =
+                      !closedActivity(activity.status) &&
+                      isTaskOverdue(task, today)
                     const time = slotLabel(task)
                     return (
                       <li key={task.id}>
@@ -165,7 +167,10 @@ export function AgendaCalendar({
                           }}
                           className={cn(
                             "flex w-full min-w-0 items-center gap-1 rounded px-0.5 py-0.5 text-left text-[11px] leading-tight hover:bg-muted/80",
-                            overdue ? "text-red-700" : "text-foreground",
+                            activity.status === "fatto" &&
+                              "text-muted-foreground line-through",
+                            activity.status === "fallita" && "text-red-700/80",
+                            overdue && "text-red-700",
                           )}
                         >
                           <span

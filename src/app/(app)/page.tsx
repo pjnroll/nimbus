@@ -52,7 +52,7 @@ function headingForRange(range: HomeRange): string {
 export default function AgendaPage() {
   const { store, updateActivity, deleteActivity } = useNimbus()
   const [selected, setSelected] = useState<Activity | null>(null)
-  const [range, setRange] = useState<HomeRange>("settimana")
+  const [range, setRange] = useState<HomeRange>("mese")
   const today = todayISO()
   const [month, setMonth] = useState(today)
   const [selectedDay, setSelectedDay] = useState(today)
