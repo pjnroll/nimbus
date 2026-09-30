@@ -31,7 +31,7 @@ export function userStorePath(userId: string): string {
 }
 
 export function assertFileId(id: string, label: string): void {
-  if (!id || !FILE_ID_RE.test(id) || id.includes("..")) {
+  if (!id || !FILE_ID_RE.test(id) || id.startsWith(".")) {
     throw new Error(`${label} non valido`)
   }
 }

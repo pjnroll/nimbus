@@ -58,6 +58,28 @@ export function readStore(userId: string): Promise<PersistedStore> {
   })
 }
 
-export function writeStore(userId: string, store: NimbusStore): Promise<void> {
-  return enqueue(() => writeJsonAtomic(userStorePath(userId), store))
+/** Attachment metadata is owned by the upload API: keep the server's copy. */
+export function writeStore(
+  userId: string,
+  store: NimbusStore,
+): Promise<NimbusStore> {
+  return enqueue(async () => {
+    const file = userStorePath(userId)
+    const current = await readJsonStore(file)
+    const serverAttachments = new Map(
+      (current?.store.activities ?? []).map((activity) => [
+        activity.id,
+        activity.attachments,
+      ]),
+    )
+    const next: NimbusStore = {
+      ...store,
+      activities: store.activities.map((activity) => ({
+        ...activity,
+        attachments: serverAttachments.get(activity.id) ?? [],
+      })),
+    }
+    await writeJsonAtomic(file, next)
+    return next
+  })
 }

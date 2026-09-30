@@ -8,16 +8,38 @@ export type SessionUser = {
   email: string
 }
 
+const INSECURE_DEV_SECRET = "nimbus-dev-secret-change-me"
+
+// Proxy and route handlers may run in separate module graphs, so the random
+// dev secret lives on globalThis to stay the same across them in one process.
+const devSecretHolder = globalThis as typeof globalThis & {
+  __nimbusDevSecret?: string
+}
+
+function randomDevSecret(): string {
+  if (!devSecretHolder.__nimbusDevSecret) {
+    const bytes = new Uint8Array(32)
+    crypto.getRandomValues(bytes)
+    devSecretHolder.__nimbusDevSecret = Array.from(bytes, (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("")
+    console.warn(
+      "[nimbus] NIMBUS_AUTH_SECRET non impostato: uso un segreto casuale, le sessioni scadono al riavvio.",
+    )
+  }
+  return devSecretHolder.__nimbusDevSecret
+}
+
 export function authSecretKey(): Uint8Array {
   const fromEnv = process.env.NIMBUS_AUTH_SECRET?.trim()
-  const secret =
-    fromEnv ||
-    (process.env.NODE_ENV === "production"
-      ? ""
-      : "nimbus-dev-secret-change-me")
-  if (!secret) {
+  if (fromEnv) return new TextEncoder().encode(fromEnv)
+  if (process.env.NODE_ENV === "production") {
     throw new Error("Imposta NIMBUS_AUTH_SECRET")
   }
+  const secret =
+    process.env.NIMBUS_ALLOW_INSECURE_DEV_SECRET === "1"
+      ? INSECURE_DEV_SECRET
+      : randomDevSecret()
   return new TextEncoder().encode(secret)
 }
 

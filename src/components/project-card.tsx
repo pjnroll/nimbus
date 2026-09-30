@@ -13,6 +13,7 @@ import { personNames } from "@/lib/people"
 import { projectBorderClass } from "@/lib/project-color"
 import { useNimbus } from "@/lib/store"
 import type { Project } from "@/lib/types"
+import { safeHttpUrl } from "@/lib/urls"
 import { cn } from "@/lib/utils"
 
 export function ProjectRow({
@@ -25,6 +26,7 @@ export function ProjectRow({
   onClone: (id: string) => void
 }) {
   const { store, readOnly } = useNimbus()
+  const driveUrl = safeHttpUrl(project.driveUrl)
   const peopleLabel = personNames(store.people, project.personIds)
 
   return (
@@ -58,11 +60,9 @@ export function ProjectRow({
           <span className="sr-only">Azioni</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {project.driveUrl ? (
+          {driveUrl ? (
             <DropdownMenuItem
-              onClick={() =>
-                window.open(project.driveUrl, "_blank", "noopener")
-              }
+              onClick={() => window.open(driveUrl, "_blank", "noopener")}
             >
               <ExternalLinkIcon />
               Drive

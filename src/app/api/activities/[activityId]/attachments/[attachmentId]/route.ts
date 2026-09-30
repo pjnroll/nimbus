@@ -45,11 +45,14 @@ export async function GET(
       activityId,
       attachmentId,
     )
-      return new NextResponse(new Uint8Array(data), {
+    return new NextResponse(new Uint8Array(data), {
       headers: {
         "Content-Type": attachment.mimeType,
         "Content-Disposition": contentDisposition(attachment.name),
         "Content-Length": String(data.byteLength),
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox; default-src 'none'",
+        "Cache-Control": "private, no-store",
       },
     })
   } catch (error) {

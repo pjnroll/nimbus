@@ -419,10 +419,17 @@ export function StoreProvider({
   }, [])
 
   const deleteActivity = useCallback((id: string) => {
+    if (demoMode) {
+      toast.info(READ_ONLY_MESSAGE)
+      return
+    }
     writeStore(deleteActivityFromStore(getSnapshot(), id))
-    void fetch(`/api/activities/${encodeURIComponent(id)}/attachments`, {
-      method: "DELETE",
-    })
+    // The server refuses the purge until the saved store no longer has the activity.
+    void persistChain.then(() =>
+      fetch(`/api/activities/${encodeURIComponent(id)}/attachments`, {
+        method: "DELETE",
+      }),
+    )
   }, [])
 
   const upsertTask = useCallback(

@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { readFile, rm, writeFile } from "node:fs/promises"
 import {
   activityAttachmentPath,
   activityAttachmentsDir,
@@ -10,8 +10,14 @@ import {
   MAX_ATTACHMENT_BYTES,
   sanitizeUploadName,
 } from "@/lib/attachments"
-import { enqueue, writeJsonAtomic } from "@/lib/persist-fs"
-import { coerceNimbusStore, newId } from "@/lib/people"
+import {
+  PRIVATE_FILE_MODE,
+  enqueue,
+  ensurePrivateDir,
+  writeJsonAtomic,
+} from "@/lib/persist-fs"
+import { usedAttachmentBytes, userQuotaBytes } from "@/lib/limits"
+import { coerceNimbusStore, newId, safeMimeType } from "@/lib/people"
 import type { ActivityAttachment, NimbusStore } from "@/lib/types"
 
 export class AttachmentError extends Error {
@@ -48,6 +54,13 @@ export function addAttachments(
   return enqueue(async () => {
     const store = await loadStore(userId)
     requireActivity(store, activityId)
+    const incoming = files.reduce((sum, file) => sum + file.data.byteLength, 0)
+    if (usedAttachmentBytes(store) + incoming > userQuotaBytes()) {
+      throw new AttachmentError(
+        "Spazio esaurito: elimina qualche allegato prima di caricarne altri",
+        413,
+      )
+    }
     const added: ActivityAttachment[] = []
     for (const file of files) {
       if (file.data.byteLength === 0) {
@@ -60,12 +73,12 @@ export function addAttachments(
         id: newId(),
         name: sanitizeUploadName(file.name),
         size: file.data.byteLength,
-        mimeType: file.type.trim() || "application/octet-stream",
+        mimeType: safeMimeType(file.type),
         createdAt: nowISO(),
       }
       const dest = activityAttachmentPath(userId, activityId, attachment.id)
-      await mkdir(activityAttachmentsDir(userId, activityId), { recursive: true })
-      await writeFile(dest, file.data)
+      await ensurePrivateDir(activityAttachmentsDir(userId, activityId))
+      await writeFile(dest, file.data, { mode: PRIVATE_FILE_MODE })
       added.push(attachment)
     }
     const next: NimbusStore = {
@@ -149,6 +162,13 @@ export function purgeActivityAttachments(
   activityId: string,
 ): Promise<void> {
   return enqueue(async () => {
+    const store = await loadStore(userId)
+    if (store.activities.some((activity) => activity.id === activityId)) {
+      throw new AttachmentError(
+        "Elimina prima l’attività, poi i suoi allegati",
+        409,
+      )
+    }
     await rm(activityAttachmentsDir(userId, activityId), {
       recursive: true,
       force: true,

@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { cleanCategoryName, findCategoryByName } from "@/lib/categories"
 import { newId } from "@/lib/people"
+import { safeHttpUrl } from "@/lib/urls"
 import {
   PROJECT_COLOR_OPTIONS,
   type ProjectColorId,
@@ -118,7 +119,7 @@ function ProjectDialogForm({
       setError("Il progetto ha bisogno di un nome.")
       return
     }
-    if (form.driveUrl && !/^https?:\/\//i.test(form.driveUrl)) {
+    if (form.driveUrl.trim() && !safeHttpUrl(form.driveUrl)) {
       setError("Il link Drive deve iniziare con http:// o https://")
       return
     }

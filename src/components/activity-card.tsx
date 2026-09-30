@@ -35,6 +35,7 @@ import {
   taskByActivityId,
 } from "@/lib/tasks"
 import type { Activity, Project } from "@/lib/types"
+import { safeHttpUrl } from "@/lib/urls"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -71,6 +72,7 @@ export function ActivityCard({
   const dense = density === "dense"
   const showDetails = !dense || expanded
   const borderClass = projectBorderClass(project)
+  const driveUrl = safeHttpUrl(activity.driveUrl)
 
   async function copyExportLine() {
     if (!task) return
@@ -173,11 +175,9 @@ export function ActivityCard({
                 )}
               </>
             )}
-            {activity.driveUrl ? (
+            {driveUrl ? (
               <DropdownMenuItem
-                onClick={() =>
-                  window.open(activity.driveUrl, "_blank", "noopener")
-                }
+                onClick={() => window.open(driveUrl, "_blank", "noopener")}
               >
                 Apri Drive
               </DropdownMenuItem>
@@ -262,9 +262,9 @@ export function ActivityCard({
             activityId={activity.id}
             attachments={activity.attachments}
           />
-          {activity.driveUrl ? (
+          {driveUrl ? (
             <Link
-              href={activity.driveUrl}
+              href={driveUrl}
               target="_blank"
               rel="noreferrer"
               className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"

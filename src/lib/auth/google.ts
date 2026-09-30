@@ -34,10 +34,7 @@ function originFromRequest(request: Request): string {
   return url.origin
 }
 
-export function publicOrigin(request: Request): string {
-  return originFromRequest(request)
-}
-
+/** In production the Host / X-Forwarded-Host headers are never trusted. */
 export function appOrigin(request: Request): string {
   const fromEnv = process.env.NIMBUS_APP_URL?.trim().replace(/\/$/, "")
   if (fromEnv) return fromEnv
@@ -45,6 +42,10 @@ export function appOrigin(request: Request): string {
     throw new Error("Imposta NIMBUS_APP_URL")
   }
   return originFromRequest(request)
+}
+
+export function publicOrigin(request: Request): string {
+  return appOrigin(request)
 }
 
 export function googleCallbackUrl(request: Request): string {
@@ -137,7 +138,13 @@ export async function googleProfileFromCode(
 }
 
 export function loginErrorUrl(request: Request, error: string): URL {
-  const url = new URL("/login", publicOrigin(request))
+  let origin: string
+  try {
+    origin = publicOrigin(request)
+  } catch {
+    origin = new URL(request.url).origin
+  }
+  const url = new URL("/login", origin)
   url.searchParams.set("error", error)
   return url
 }

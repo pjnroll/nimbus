@@ -26,10 +26,54 @@ function localDevOrigins(): string[] {
   return [...hosts]
 }
 
+// Full CSP with nonces is left out: the inline palette boot script would need one.
+const CONTENT_SECURITY_POLICY = [
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join("; ")
+
+function securityHeaders() {
+  const headers = [
+    { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
+    { key: "X-Frame-Options", value: "DENY" },
+    { key: "X-Content-Type-Options", value: "nosniff" },
+    { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    {
+      key: "Permissions-Policy",
+      value: "camera=(), microphone=(), geolocation=(), payment=()",
+    },
+  ]
+  if (process.env.NODE_ENV === "production") {
+    headers.push({
+      key: "Strict-Transport-Security",
+      value: "max-age=31536000; includeSubDomains",
+    })
+  }
+  return headers
+}
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: localDevOrigins(),
+  poweredByHeader: false,
   experimental: {
     proxyClientMaxBodySize: "25mb",
+  },
+  async headers() {
+    return [
+      { source: "/:path*", headers: securityHeaders() },
+      {
+        // Config headers override route headers, so the download sandbox is set here.
+        source: "/api/activities/:activityId/attachments/:attachmentId",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: `sandbox; default-src 'none'; ${CONTENT_SECURITY_POLICY}`,
+          },
+        ],
+      },
+    ]
   },
 }
 

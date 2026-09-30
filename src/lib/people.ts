@@ -1,5 +1,6 @@
 import { nowISO } from "@/lib/dates"
 import { coerceProjectColor } from "@/lib/project-color"
+import { safeHttpUrl } from "@/lib/urls"
 import {
   isLegacyNimbusStore,
   isNimbusStore,
@@ -149,6 +150,15 @@ function upsertFromName(
   return person.id
 }
 
+export function safeMimeType(value: unknown): string {
+  return typeof value === "string" &&
+    /^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$/i.test(
+      value.trim(),
+    )
+    ? value.trim()
+    : "application/octet-stream"
+}
+
 function coerceAttachments(value: unknown): Activity["attachments"] {
   if (!Array.isArray(value)) return []
   const attachments: Activity["attachments"] = []
@@ -169,12 +179,9 @@ function coerceAttachments(value: unknown): Activity["attachments"] {
     if (typeof candidate.createdAt !== "string") continue
     attachments.push({
       id: candidate.id,
-      name: candidate.name,
+      name: candidate.name.slice(0, 200),
       size: candidate.size,
-      mimeType:
-        typeof candidate.mimeType === "string" && candidate.mimeType
-          ? candidate.mimeType
-          : "application/octet-stream",
+      mimeType: safeMimeType(candidate.mimeType),
       createdAt: candidate.createdAt,
     })
   }
@@ -204,17 +211,24 @@ function coerceTasks(value: unknown): Task[] {
       personIds: Array.isArray(candidate.personIds)
         ? candidate.personIds.filter((id): id is string => typeof id === "string")
         : [],
-      notes: typeof candidate.notes === "string" ? candidate.notes : "",
+      notes: text(candidate.notes, MAX_LONG_TEXT),
     })
   }
   return tasks
 }
 
+const MAX_SHORT_TEXT = 300
+const MAX_LONG_TEXT = 10_000
+
+function text(value: unknown, max: number): string {
+  return typeof value === "string" ? value.slice(0, max) : ""
+}
+
 function normalizeActivity(raw: Record<string, unknown>): Activity {
   return {
     id: String(raw.id ?? ""),
-    title: typeof raw.title === "string" ? raw.title : "",
-    description: typeof raw.description === "string" ? raw.description : "",
+    title: text(raw.title, MAX_SHORT_TEXT),
+    description: text(raw.description, MAX_LONG_TEXT),
     projectId: typeof raw.projectId === "string" ? raw.projectId : null,
     source:
       raw.source === "email" || raw.source === "chat" || raw.source === "altro"
@@ -235,9 +249,9 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
       raw.priority === "alta" || raw.priority === "bassa" ? raw.priority : "media",
     waitingOnPersonId:
       typeof raw.waitingOnPersonId === "string" ? raw.waitingOnPersonId : null,
-    waitingReason: typeof raw.waitingReason === "string" ? raw.waitingReason : "",
-    closingNote: typeof raw.closingNote === "string" ? raw.closingNote : "",
-    driveUrl: typeof raw.driveUrl === "string" ? raw.driveUrl : "",
+    waitingReason: text(raw.waitingReason, MAX_LONG_TEXT),
+    closingNote: text(raw.closingNote, MAX_LONG_TEXT),
+    driveUrl: safeHttpUrl(text(raw.driveUrl, MAX_LONG_TEXT)),
     attachments: coerceAttachments(raw.attachments),
     categoryId: typeof raw.categoryId === "string" ? raw.categoryId : null,
     createdAt: typeof raw.createdAt === "string" ? raw.createdAt : nowISO(),
@@ -249,13 +263,26 @@ function ensureStoreShape(store: NimbusStore): NimbusStore {
   return {
     ...store,
     version: 4,
+    people: store.people.map((person) => ({
+      ...person,
+      name: text(person.name, MAX_SHORT_TEXT),
+    })),
     projects: store.projects.map((project) => ({
       ...project,
+      name: text(project.name, MAX_SHORT_TEXT),
+      client: text(project.client, MAX_SHORT_TEXT),
+      notes: text(project.notes, MAX_LONG_TEXT),
+      driveUrl: safeHttpUrl(text(project.driveUrl, MAX_LONG_TEXT)),
       color: coerceProjectColor(
         (project as Project & { color?: unknown }).color,
         project.id,
       ),
-      categories: Array.isArray(project.categories) ? project.categories : [],
+      categories: Array.isArray(project.categories)
+        ? project.categories.map((category) => ({
+            ...category,
+            name: text(category.name, MAX_SHORT_TEXT),
+          }))
+        : [],
     })),
     activities: store.activities.map((activity) =>
       normalizeActivity(activity as unknown as Record<string, unknown>),

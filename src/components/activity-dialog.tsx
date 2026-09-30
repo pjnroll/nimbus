@@ -28,6 +28,7 @@ import {
 import { useNimbus } from "@/lib/store"
 import { buildGoogleCalendarEventUrl } from "@/lib/google-calendar"
 import { personNames } from "@/lib/people"
+import { safeHttpUrl } from "@/lib/urls"
 import {
   buildStartsAt,
   taskByActivityId,
@@ -220,7 +221,7 @@ function ActivityDialogForm({
       setError("Serve un titolo, anche breve.")
       return
     }
-    if (form.driveUrl && !/^https?:\/\//i.test(form.driveUrl)) {
+    if (form.driveUrl.trim() && !safeHttpUrl(form.driveUrl)) {
       setError("Il link Drive deve iniziare con http:// o https://")
       return
     }

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth/session"
 import {
+  MAX_FILES_PER_UPLOAD,
+  MAX_UPLOAD_BODY_BYTES,
+  declaredBodyTooLarge,
+} from "@/lib/limits"
+import {
   AttachmentError,
   addAttachments,
   purgeActivityAttachments,
@@ -33,6 +38,12 @@ export async function POST(
   if (!session) {
     return NextResponse.json({ error: "Non autenticato" }, { status: 401 })
   }
+  if (declaredBodyTooLarge(request, MAX_UPLOAD_BODY_BYTES)) {
+    return NextResponse.json(
+      { error: "Caricamento troppo grande (massimo 25 MB per volta)" },
+      { status: 413 },
+    )
+  }
   try {
     const { activityId } = await context.params
     const form = await request.formData()
@@ -43,6 +54,19 @@ export async function POST(
       return NextResponse.json(
         { error: "Seleziona almeno un file" },
         { status: 400 },
+      )
+    }
+    if (uploads.length > MAX_FILES_PER_UPLOAD) {
+      return NextResponse.json(
+        { error: `Al massimo ${MAX_FILES_PER_UPLOAD} file per volta` },
+        { status: 400 },
+      )
+    }
+    const total = uploads.reduce((sum, file) => sum + file.size, 0)
+    if (total > MAX_UPLOAD_BODY_BYTES) {
+      return NextResponse.json(
+        { error: "Caricamento troppo grande (massimo 25 MB per volta)" },
+        { status: 413 },
       )
     }
     const files = await Promise.all(

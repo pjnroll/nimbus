@@ -18,6 +18,7 @@ import { projectLogEntries } from "@/lib/project-log"
 import { openActivities, sortByTaskThenPriority } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import { NONE_CATEGORY, type Activity } from "@/lib/types"
+import { safeHttpUrl } from "@/lib/urls"
 import { cn } from "@/lib/utils"
 
 const ALL = "__all__"
@@ -120,12 +121,16 @@ export default function ProjectDetailPage({
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          {project.driveUrl ? (
+          {safeHttpUrl(project.driveUrl) ? (
             <Button
               variant="outline"
               nativeButton={false}
               render={
-                <Link href={project.driveUrl} target="_blank" rel="noreferrer" />
+                <Link
+                  href={safeHttpUrl(project.driveUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                />
               }
             >
               Apri Drive
