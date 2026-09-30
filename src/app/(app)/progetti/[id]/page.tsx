@@ -8,11 +8,13 @@ import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
 import { ProjectDialog } from "@/components/project-dialog"
+import { ProjectLog } from "@/components/project-log"
 import { CategoryBadge } from "@/components/status-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { personNames } from "@/lib/people"
+import { projectLogEntries } from "@/lib/project-log"
 import { openActivities, sortByTaskThenPriority } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import { NONE_CATEGORY, type Activity } from "@/lib/types"
@@ -54,12 +56,13 @@ export default function ProjectDetailPage({
     return sortByTaskThenPriority(mine, store.tasks)
   }, [store.activities, store.tasks, id])
 
-  const openAll = openActivities(activities)
   const visible = activities.filter((activity) => {
     if (categoryFilter === ALL) return true
     if (categoryFilter === NONE_CATEGORY) return !activity.categoryId
     return activity.categoryId === categoryFilter
   })
+  const openVisible = openActivities(visible)
+  const logEntries = projectLogEntries(visible, store.tasks)
 
   if (!project) {
     return (
@@ -150,62 +153,70 @@ export default function ProjectDetailPage({
         </div>
       </header>
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="font-heading text-xl font-medium">Attività</h2>
-          <p className="text-sm text-muted-foreground">
-            {openAll.length === 1 ? "1 aperta" : `${openAll.length} aperte`} su{" "}
-            {activities.length} totali.
-          </p>
+      {project.categories.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant={categoryFilter === ALL ? "default" : "outline"}
+            onClick={() => setCategoryFilter(ALL)}
+          >
+            Tutte
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={categoryFilter === NONE_CATEGORY ? "default" : "outline"}
+            onClick={() => setCategoryFilter(NONE_CATEGORY)}
+          >
+            Senza categoria
+          </Button>
+          {project.categories.map((category) => (
+            <Button
+              key={category.id}
+              type="button"
+              size="sm"
+              variant={categoryFilter === category.id ? "default" : "outline"}
+              onClick={() => setCategoryFilter(category.id)}
+            >
+              {category.name}
+            </Button>
+          ))}
         </div>
-        {project.categories.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            <Button
-              type="button"
-              size="sm"
-              variant={categoryFilter === ALL ? "default" : "outline"}
-              onClick={() => setCategoryFilter(ALL)}
-            >
-              Tutte
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={categoryFilter === NONE_CATEGORY ? "default" : "outline"}
-              onClick={() => setCategoryFilter(NONE_CATEGORY)}
-            >
-              Senza categoria
-            </Button>
-            {project.categories.map((category) => (
-              <Button
-                key={category.id}
-                type="button"
-                size="sm"
-                variant={categoryFilter === category.id ? "default" : "outline"}
-                onClick={() => setCategoryFilter(category.id)}
-              >
-                {category.name}
-              </Button>
-            ))}
+      ) : null}
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+        <ProjectLog entries={logEntries} onOpen={setSelected} />
+        <aside className="min-w-0 space-y-3 lg:sticky lg:top-4">
+          <div>
+            <h2 className="font-heading text-xl font-medium">Attività aperte</h2>
+            <p className="text-sm text-muted-foreground">
+              {openVisible.length === 1
+                ? "1 aperta"
+                : `${openVisible.length} aperte`}
+            </p>
           </div>
-        ) : null}
-        <ActivityList
-          activities={visible}
-          projects={store.projects}
-          showProjectName={false}
-          onOpen={setSelected}
-          onStatus={(activityId, status, extra) => {
-            updateActivity(activityId, { status, ...extra })
-            toast.success("Stato aggiornato")
-          }}
-          onDelete={(activityId) => {
-            deleteActivity(activityId)
-            toast.success("Attività eliminata")
-          }}
-          emptyTitle="Nessuna attività"
-          emptyDescription="Crea un’attività su questo progetto."
-        />
-      </section>
+          <ActivityList
+            activities={openVisible}
+            projects={store.projects}
+            showProjectName={false}
+            density="dense"
+            showTaskSlot
+            compactEmpty
+            onOpen={setSelected}
+            onStatus={(activityId, status, extra) => {
+              updateActivity(activityId, { status, ...extra })
+              toast.success("Stato aggiornato")
+            }}
+            onDelete={(activityId) => {
+              deleteActivity(activityId)
+              toast.success("Attività eliminata")
+            }}
+            emptyTitle="Nessuna attività aperta"
+            emptyDescription="Crea un’attività su questo progetto."
+          />
+        </aside>
+      </div>
 
       <ActivityDialog
         open={Boolean(selected)}
