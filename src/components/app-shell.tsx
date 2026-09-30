@@ -10,8 +10,10 @@ import {
   ListTodoIcon,
   LogOutIcon,
   MenuIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { DataMenu } from "@/components/data-menu"
 import { ThemeSelector } from "@/components/theme-selector"
 import { Button } from "@/components/ui/button"
@@ -22,46 +24,108 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { projectSwatchClass } from "@/lib/project-color"
 import { resetClientStore, useNimbus } from "@/lib/store"
+import type { Project, ProjectStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 const NAV = [
   { href: "/", label: "Agenda", icon: CalendarDaysIcon },
   { href: "/attivita", label: "Attività", icon: ListTodoIcon },
-  { href: "/progetti", label: "Progetti", icon: FolderKanbanIcon },
 ]
+
+const SIDEBAR_STORAGE_KEY = "nimbus-sidebar"
+
+const STATUS_ORDER: Record<ProjectStatus, number> = {
+  attivo: 0,
+  in_attesa: 1,
+  chiuso: 2,
+}
+
+const navLinkClass = (active: boolean) =>
+  cn(
+    "flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+    active
+      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/15"
+      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+  )
+
+function sortProjects(projects: Project[]): Project[] {
+  return [...projects].sort((a, b) => {
+    const byStatus = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
+    if (byStatus !== 0) return byStatus
+    return a.name.localeCompare(b.name, "it")
+  })
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { hydrated, readOnly } = useNimbus()
   const [open, setOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "hidden")
+  }, [])
+
+  function setSidebarCollapsed(next: boolean) {
+    setCollapsed(next)
+    window.localStorage.setItem(
+      SIDEBAR_STORAGE_KEY,
+      next ? "hidden" : "open",
+    )
+  }
 
   return (
     <div className="flex min-h-full">
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-sm backdrop-blur-md md:flex">
-        <Brand />
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-sm backdrop-blur-md",
+          collapsed ? "md:hidden" : "md:flex",
+        )}
+      >
+        <Brand onHide={() => setSidebarCollapsed(true)} />
         <Nav pathname={pathname} />
         <SidebarFooter />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col app-atmosphere">
-        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-foreground/8 bg-background/75 px-4 py-3 backdrop-blur-md md:hidden">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger render={<Button variant="outline" size="icon" />}>
-              <MenuIcon />
-              <span className="sr-only">Apri menu</span>
-            </SheetTrigger>
-            <SheetContent
-              side="left"
-              className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground shadow-lg"
-            >
-              <SheetHeader className="sr-only">
-                <SheetTitle>Navigazione</SheetTitle>
-              </SheetHeader>
-              <Brand />
-              <Nav pathname={pathname} onNavigate={() => setOpen(false)} />
-              <SidebarFooter />
-            </SheetContent>
-          </Sheet>
+        <header
+          className={cn(
+            "sticky top-0 z-30 flex items-center gap-2 border-b border-foreground/8 bg-background/75 px-4 py-3 backdrop-blur-md",
+            collapsed ? "flex" : "md:hidden",
+          )}
+        >
+          <div className="md:hidden">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger render={<Button variant="outline" size="icon" />}>
+                <MenuIcon />
+                <span className="sr-only">Apri menu</span>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="w-72 gap-0 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground shadow-lg"
+              >
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Navigazione</SheetTitle>
+                </SheetHeader>
+                <Brand />
+                <Nav
+                  pathname={pathname}
+                  onNavigate={() => setOpen(false)}
+                />
+                <SidebarFooter />
+              </SheetContent>
+            </Sheet>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            className="hidden md:inline-flex"
+            onClick={() => setSidebarCollapsed(false)}
+          >
+            <PanelLeftOpenIcon />
+            <span className="sr-only">Mostra menu</span>
+          </Button>
           <div className="flex flex-1 items-center gap-2 font-heading text-lg font-semibold tracking-tight">
             <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary shadow-[0_0_0_1px] shadow-primary/20">
               <CloudIcon className="size-4" />
@@ -106,14 +170,14 @@ function DemoBanner() {
   )
 }
 
-function Brand() {
+function Brand({ onHide }: { onHide?: () => void }) {
   return (
     <div className="border-b border-sidebar-border px-5 py-6">
       <div className="flex items-center gap-3">
-        <span className="flex size-11 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-[0_0_24px] shadow-[color:var(--surface-glow)] ring-1 ring-primary/25">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-[0_0_24px] shadow-[color:var(--surface-glow)] ring-1 ring-primary/25">
           <CloudIcon className="size-5" />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="font-heading text-xl leading-none font-semibold tracking-tight">
             Nimbus
           </p>
@@ -121,6 +185,17 @@ function Brand() {
             Laviano
           </p>
         </div>
+        {onHide ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-sidebar-foreground"
+            onClick={onHide}
+          >
+            <PanelLeftCloseIcon />
+            <span className="sr-only">Nascondi menu</span>
+          </Button>
+        ) : null}
       </div>
     </div>
   )
@@ -133,37 +208,108 @@ function Nav({
   pathname: string
   onNavigate?: () => void
 }) {
+  const { store } = useNimbus()
+  const projects = useMemo(
+    () => sortProjects(store.projects),
+    [store.projects],
+  )
+
   return (
-    <nav className="flex flex-1 flex-col gap-1 p-3">
-      {NAV.map((item) => {
-        const active =
-          item.href === "/"
-            ? pathname === "/"
-            : pathname === item.href || pathname.startsWith(`${item.href}/`)
-        const Icon = item.icon
-        return (
+    <nav className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-col gap-1 p-3 pb-2">
+        {NAV.map((item) => {
+          const active =
+            item.href === "/"
+              ? pathname === "/"
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`)
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={navLinkClass(active)}
+            >
+              <Icon
+                className={cn(
+                  "size-4",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              />
+              <span className="flex-1">{item.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col border-t border-sidebar-border pt-2">
+        <div className="px-3">
           <Link
-            key={item.href}
-            href={item.href}
+            href="/progetti"
             onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-              active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/15"
-                : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-            )}
+            aria-current={pathname === "/progetti" ? "page" : undefined}
+            className={navLinkClass(pathname === "/progetti")}
           >
-            <Icon
+            <FolderKanbanIcon
               className={cn(
                 "size-4",
-                active ? "text-primary" : "text-muted-foreground",
+                pathname === "/progetti"
+                  ? "text-primary"
+                  : "text-muted-foreground",
               )}
             />
-            <span className="flex-1">{item.label}</span>
+            <span className="flex-1">Progetti</span>
           </Link>
-        )
-      })}
+        </div>
+        <div className="mt-1 min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+          {projects.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-muted-foreground">
+              Nessun progetto
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-0.5">
+              {projects.map((project) => {
+                const href = `/progetti/${project.id}`
+                const active = pathname === href
+                const closed = project.status === "chiuso"
+                return (
+                  <li key={project.id}>
+                    <Link
+                      href={href}
+                      onClick={onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      title={project.name}
+                      className={cn(
+                        "flex min-h-9 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/15"
+                          : "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                        closed
+                          ? "text-muted-foreground"
+                          : active
+                            ? undefined
+                            : "text-sidebar-foreground/75",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          projectSwatchClass(project),
+                        )}
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {project.name}
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </nav>
   )
 }
