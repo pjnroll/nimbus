@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import {
   CalendarDaysIcon,
   CloudIcon,
+  CompassIcon,
   FolderKanbanIcon,
   ListTodoIcon,
   LogOutIcon,
@@ -32,7 +33,7 @@ const NAV = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { hydrated } = useNimbus()
+  const { hydrated, readOnly } = useNimbus()
   const [open, setOpen] = useState(false)
 
   return (
@@ -69,6 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <ThemeSelector side="bottom" className="text-foreground" />
         </header>
+        {readOnly ? <DemoBanner /> : null}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-7 sm:px-6 lg:px-8">
           {hydrated ? (
             children
@@ -79,6 +81,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
+    </div>
+  )
+}
+
+function DemoBanner() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-primary/20 bg-primary/10 px-4 py-2.5 text-sm sm:px-6 lg:px-8">
+      <p className="flex min-w-0 flex-1 items-center gap-2">
+        <CompassIcon className="size-4 shrink-0 text-primary" />
+        <span>
+          Stai esplorando Nimbus con dati di esempio. Le modifiche non vengono
+          salvate.
+        </span>
+      </p>
+      <Button
+        size="sm"
+        nativeButton={false}
+        render={<a href="/api/auth/google" />}
+      >
+        Accedi con Google
+      </Button>
     </div>
   )
 }
@@ -147,9 +170,11 @@ function Nav({
 
 function SidebarFooter() {
   const router = useRouter()
+  const { readOnly } = useNimbus()
   const [email, setEmail] = useState<string | null>(null)
 
   useEffect(() => {
+    if (readOnly) return
     void fetch("/api/auth/me")
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: unknown) => {
@@ -163,11 +188,13 @@ function SidebarFooter() {
         }
       })
       .catch(() => undefined)
-  }, [])
+  }, [readOnly])
 
   async function logout() {
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
+      await fetch(readOnly ? "/api/demo" : "/api/auth/logout", {
+        method: readOnly ? "DELETE" : "POST",
+      })
     } catch {
       // Still leave the client session.
     }
@@ -183,11 +210,13 @@ function SidebarFooter() {
           className="min-w-0 truncate px-2 text-xs text-muted-foreground"
           title={email ?? undefined}
         >
-          {email ?? "Dati salvati sul server"}
+          {readOnly
+            ? "Modalità esplorazione"
+            : (email ?? "Dati salvati sul server")}
         </p>
         <div className="flex items-center gap-0.5">
           <ThemeSelector />
-          <DataMenu />
+          {readOnly ? null : <DataMenu />}
         </div>
       </div>
       <Button

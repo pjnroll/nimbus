@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { DEMO_COOKIE } from "@/lib/auth/demo"
 import { readSessionToken, SESSION_COOKIE } from "@/lib/auth/token"
 
 export async function proxy(request: NextRequest) {
@@ -9,14 +10,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
+  const isApi = pathname.startsWith("/api/")
   const isPublic =
-    pathname.startsWith("/login") || pathname.startsWith("/api/auth/")
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/api/auth/") ||
+    pathname === "/api/demo"
 
   const token = request.cookies.get(SESSION_COOKIE)?.value
   const session = token ? await readSessionToken(token) : null
+  const demo = !session && request.cookies.get(DEMO_COOKIE)?.value === "1"
 
-  if (!session && !isPublic) {
-    if (pathname.startsWith("/api/")) {
+  if (!session && !isPublic && !(demo && !isApi)) {
+    if (isApi) {
       return NextResponse.json({ error: "Non autenticato" }, { status: 401 })
     }
     const login = new URL("/login", request.url)

@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import { toast } from "sonner"
-import { DownloadIcon, MoreVerticalIcon, RotateCcwIcon, UploadIcon } from "lucide-react"
+import { DownloadIcon, MoreVerticalIcon, Trash2Icon, UploadIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import {
 import { parseImportedStore, useNimbus } from "@/lib/store"
 
 export function DataMenu() {
-  const { store, replaceStore, resetToSeed } = useNimbus()
+  const { store, replaceStore, resetToEmpty } = useNimbus()
   const inputRef = useRef<HTMLInputElement>(null)
 
   function exportJson() {
@@ -77,12 +77,19 @@ export function DataMenu() {
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
-              resetToSeed()
-              toast.message("Ripristinati i dati di esempio")
+              if (
+                !window.confirm(
+                  "Eliminare tutti progetti, attività e task? Esporta prima un backup se ti serve.",
+                )
+              ) {
+                return
+              }
+              resetToEmpty()
+              toast.message("Dati svuotati")
             }}
           >
-            <RotateCcwIcon />
-            Ripristina esempio
+            <Trash2Icon />
+            Svuota tutti i dati
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

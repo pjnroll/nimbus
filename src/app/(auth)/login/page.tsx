@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { CloudIcon } from "lucide-react"
+import { CloudIcon, CompassIcon } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -124,6 +124,26 @@ function LoginCard() {
             registrato.
           </p>
         )}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          oppure
+          <span className="h-px flex-1 bg-border" />
+        </div>
+        <div className="grid gap-1.5">
+          <Button
+            nativeButton={false}
+            render={<a href="/api/demo" />}
+            variant="secondary"
+            className="w-full"
+            size="lg"
+          >
+            <CompassIcon />
+            Esplora Nimbus
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Dati di esempio, sola lettura. Nessun account richiesto.
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

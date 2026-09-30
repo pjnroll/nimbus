@@ -177,6 +177,7 @@ function ActivityDialogForm({
     removeActivityAttachment,
     upsertPerson,
     upsertCategory,
+    readOnly,
   } = useNimbus()
   const existingTask = activity
     ? taskByActivityId(store.tasks, activity.id)
@@ -383,7 +384,7 @@ function ActivityDialogForm({
                       removeActivityAttachment(activity.id, attachmentId)
                   : undefined
               }
-              disabled={busy}
+              disabled={busy || readOnly}
             />
           </FormField>
         </FormSection>
@@ -603,19 +604,23 @@ function ActivityDialogForm({
             variant="ghost"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={remove}
+            disabled={readOnly}
           >
             Elimina
           </Button>
         ) : null}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {readOnly ? (
+            <p className="text-xs text-muted-foreground">Sola lettura</p>
+          ) : null}
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={busy}
           >
-            Annulla
+            {readOnly ? "Chiudi" : "Annulla"}
           </Button>
-          <Button onClick={() => void save()} disabled={busy}>
+          <Button onClick={() => void save()} disabled={busy || readOnly}>
             {busy ? "Salvataggio…" : "Salva"}
           </Button>
         </div>

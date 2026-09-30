@@ -13,6 +13,7 @@ import {
   createSessionToken,
   sessionCookieOptions,
 } from "@/lib/auth/token"
+import { DEMO_COOKIE, demoCookieOptions } from "@/lib/auth/demo"
 import { upsertGoogleUser } from "@/lib/auth/users"
 
 export const runtime = "nodejs"
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
     const token = await createSessionToken(user)
     const response = NextResponse.redirect(new URL(next, publicOrigin(request)))
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions())
+    response.cookies.set(DEMO_COOKIE, "", { ...demoCookieOptions(), maxAge: 0 })
     clearOAuthCookie(response)
     return response
   } catch (error) {

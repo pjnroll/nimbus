@@ -2,7 +2,7 @@ import { readFile, unlink } from "node:fs/promises"
 import { isNotFound, legacyStorePath, userStorePath } from "@/lib/data-dir"
 import { enqueue, writeJsonAtomic } from "@/lib/persist-fs"
 import { coerceNimbusStore } from "@/lib/people"
-import { SEED_STORE } from "@/lib/seed"
+import { EMPTY_STORE } from "@/lib/seed"
 import type { NimbusStore } from "@/lib/types"
 
 export type PersistedStore = {
@@ -40,7 +40,7 @@ export async function provisionUserStore(
       return
     }
   }
-  await writeJsonAtomic(dest, SEED_STORE)
+  await writeJsonAtomic(dest, EMPTY_STORE)
 }
 
 export function readStore(userId: string): Promise<PersistedStore> {
@@ -53,8 +53,8 @@ export function readStore(userId: string): Promise<PersistedStore> {
       }
       return { store: existing.store, created: false }
     }
-    await writeJsonAtomic(file, SEED_STORE)
-    return { store: SEED_STORE, created: true }
+    await writeJsonAtomic(file, EMPTY_STORE)
+    return { store: EMPTY_STORE, created: true }
   })
 }
 

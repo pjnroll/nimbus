@@ -59,7 +59,7 @@ export function ActivityCard({
   onStatus: (status: Activity["status"]) => void
   onDelete: () => void
 }) {
-  const { store } = useNimbus()
+  const { store, readOnly } = useNimbus()
   const [expanded, setExpanded] = useState(false)
   const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
@@ -140,30 +140,38 @@ export function ActivityCard({
             <span className="sr-only">Azioni</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onOpen}>Apri e modifica</DropdownMenuItem>
-            {!closedActivity(activity.status) && activity.status !== "in_corso" ? (
-              <DropdownMenuItem onClick={() => onStatus("in_corso")}>
-                Segna in corso
-              </DropdownMenuItem>
-            ) : null}
-            {!closedActivity(activity.status) && activity.status !== "in_attesa" ? (
-              <DropdownMenuItem onClick={() => onStatus("in_attesa")}>
-                Da pianificare
-              </DropdownMenuItem>
-            ) : null}
-            {!closedActivity(activity.status) ? (
+            <DropdownMenuItem onClick={onOpen}>
+              {readOnly ? "Apri" : "Apri e modifica"}
+            </DropdownMenuItem>
+            {readOnly ? null : (
               <>
-                <DropdownMenuItem onClick={() => onStatus("fatto")}>
-                  Segna fatto
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onStatus("fallita")}>
-                  Segna fallita
-                </DropdownMenuItem>
+                {!closedActivity(activity.status) &&
+                activity.status !== "in_corso" ? (
+                  <DropdownMenuItem onClick={() => onStatus("in_corso")}>
+                    Segna in corso
+                  </DropdownMenuItem>
+                ) : null}
+                {!closedActivity(activity.status) &&
+                activity.status !== "in_attesa" ? (
+                  <DropdownMenuItem onClick={() => onStatus("in_attesa")}>
+                    Da pianificare
+                  </DropdownMenuItem>
+                ) : null}
+                {!closedActivity(activity.status) ? (
+                  <>
+                    <DropdownMenuItem onClick={() => onStatus("fatto")}>
+                      Segna fatto
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onStatus("fallita")}>
+                      Segna fallita
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem onClick={() => onStatus("in_corso")}>
+                    Riapri
+                  </DropdownMenuItem>
+                )}
               </>
-            ) : (
-              <DropdownMenuItem onClick={() => onStatus("in_corso")}>
-                Riapri
-              </DropdownMenuItem>
             )}
             {activity.driveUrl ? (
               <DropdownMenuItem
@@ -179,10 +187,14 @@ export function ActivityCard({
                 Copia riga export
               </DropdownMenuItem>
             ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={onDelete}>
-              Elimina
-            </DropdownMenuItem>
+            {readOnly ? null : (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                  Elimina
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -25,7 +25,7 @@ const projects: Project[] = [
   {
     id: "prj-tributi",
     name: "Cloud AWS · Piattaforma Tributi",
-    client: "Maggioli — Area Enti Locali",
+    client: "Azienda — Area Enti Locali",
     status: "attivo",
     color: "teal",
     driveUrl: "https://drive.google.com/drive/folders/tributi-cloud",
@@ -43,7 +43,7 @@ const projects: Project[] = [
   {
     id: "prj-azure-comuni",
     name: "Migrazione Azure · Comuni",
-    client: "Maggioli — Cloud Practice",
+    client: "Azienda — Cloud Practice",
     status: "attivo",
     color: "amber",
     driveUrl: "https://drive.google.com/drive/folders/migrazione-azure-comuni",
@@ -61,7 +61,7 @@ const projects: Project[] = [
   {
     id: "prj-qa",
     name: "Supporto ambienti QA",
-    client: "Maggioli — Internal IT",
+    client: "Azienda — Internal IT",
     status: "in_attesa",
     color: "sky",
     driveUrl: "https://drive.google.com/drive/folders/ambienti-qa",
@@ -180,7 +180,7 @@ const activities: Activity[] = [
   },
   {
     id: "act-wait-firewall",
-    title: "Apertura firewall verso SFTP Maggioli",
+    title: "Apertura firewall verso SFTP Azienda",
     description:
       "I collaudi del Comune pilota sono bloccati. Sollecitare NetOps se non arriva risposta oggi.",
     projectId: "prj-tributi",
@@ -311,14 +311,236 @@ const tasks: Task[] = [
   {
     id: "tsk-eip",
     activityId: "act-done-eip",
-    startsAt: dateToNoonStartsAt(addDaysISO(-5)),
-    endsAt: null,
+    startsAt: `${addDaysISO(-5)}T09:30`,
+    endsAt: `${addDaysISO(-5)}T10:00`,
     personIds: [],
     notes: "",
   },
 ]
 
-export const SEED_STORE: NimbusStore = {
+type Execution = {
+  id: string
+  projectId: string
+  categoryId: string | null
+  title: string
+  description: string
+  outcome: "fatto" | "fallita"
+  closingNote: string
+  daysAgo: number
+  start: string
+  end: string | null
+  personIds?: string[]
+  slotNote?: string
+  requesterId?: string | null
+}
+
+const executions: Execution[] = [
+  {
+    id: "kms",
+    projectId: "prj-tributi",
+    categoryId: "cat-tributi-infra",
+    title: "Rotazione chiavi KMS ambiente prod",
+    description: "Rotazione annuale delle CMK usate da RDS e S3.",
+    outcome: "fatto",
+    closingNote: "Chiavi ruotate, alias aggiornati. Nessun impatto sui servizi.",
+    daysAgo: 38,
+    start: "09:00",
+    end: "10:30",
+    personIds: ["ppl-andrea"],
+  },
+  {
+    id: "bastion",
+    projectId: "prj-tributi",
+    categoryId: "cat-tributi-infra",
+    title: "Patch kernel sul bastion host",
+    description: "Aggiornamento di sicurezza del kernel e riavvio programmato.",
+    outcome: "fallita",
+    closingNote:
+      "Il pacchetto dell'agent di monitoraggio blocca l'upgrade. Da rifare dopo l'aggiornamento dell'agent.",
+    daysAgo: 30,
+    start: "18:00",
+    end: "19:00",
+    personIds: ["ppl-netops"],
+    slotNote: "Finestra serale concordata",
+  },
+  {
+    id: "bastion-retry",
+    projectId: "prj-tributi",
+    categoryId: "cat-tributi-infra",
+    title: "Patch kernel sul bastion host (secondo tentativo)",
+    description: "Nuovo tentativo dopo l'aggiornamento dell'agent CloudWatch.",
+    outcome: "fatto",
+    closingNote: "Patch applicata, riavvio in 4 minuti. Accessi SSH verificati.",
+    daysAgo: 23,
+    start: "18:00",
+    end: "18:45",
+    personIds: ["ppl-netops"],
+  },
+  {
+    id: "restore",
+    projectId: "prj-tributi",
+    categoryId: "cat-tributi-app",
+    title: "Restore di prova da snapshot RDS",
+    description: "Verifica trimestrale del piano di disaster recovery.",
+    outcome: "fatto",
+    closingNote: "Restore completato in 22 minuti, dati coerenti. Report in Drive.",
+    daysAgo: 16,
+    start: "14:00",
+    end: "16:00",
+    personIds: ["ppl-laura"],
+  },
+  {
+    id: "ami",
+    projectId: "prj-tributi",
+    categoryId: "cat-tributi-app",
+    title: "Aggiornamento AMI degli application server",
+    description: "Rilascio della nuova AMI con Java 21 sull'auto scaling group.",
+    outcome: "fallita",
+    closingNote:
+      "Health check falliti sulla nuova AMI, rollback eseguito. Manca un parametro JVM nel launch template.",
+    daysAgo: 9,
+    start: "21:00",
+    end: "22:30",
+    personIds: ["ppl-andrea", "ppl-marco"],
+  },
+  {
+    id: "ente-a",
+    projectId: "prj-azure-comuni",
+    categoryId: "cat-azure-app",
+    title: "Migrazione Comune di Cesena",
+    description: "Lift-and-shift delle VM applicative e del database.",
+    outcome: "fatto",
+    closingNote: "Migrazione andata a buon fine. Collaudo del referente superato.",
+    daysAgo: 35,
+    start: "10:00",
+    end: "11:00",
+    personIds: ["ppl-team-azure", "ppl-referente-it"],
+  },
+  {
+    id: "ente-b",
+    projectId: "prj-azure-comuni",
+    categoryId: "cat-azure-app",
+    title: "Migrazione Comune di Forlì",
+    description: "Lift-and-shift delle VM applicative e del database.",
+    outcome: "fallita",
+    closingNote:
+      "Problema relativo alle librerie sovrapposte: due versioni di OpenSSL sulla VM migrata.",
+    daysAgo: 26,
+    start: "15:00",
+    end: "16:00",
+    personIds: ["ppl-team-azure"],
+  },
+  {
+    id: "ente-b-retry",
+    projectId: "prj-azure-comuni",
+    categoryId: "cat-azure-app",
+    title: "Migrazione Comune di Forlì (secondo tentativo)",
+    description: "Nuovo tentativo con immagine ripulita dalle librerie duplicate.",
+    outcome: "fatto",
+    closingNote: "Migrazione completata. Librerie allineate, servizi avviati al primo colpo.",
+    daysAgo: 19,
+    start: "15:00",
+    end: "16:30",
+    personIds: ["ppl-team-azure", "ppl-referente-it"],
+  },
+  {
+    id: "adconnect",
+    projectId: "prj-azure-comuni",
+    categoryId: "cat-azure-infra",
+    title: "Configurazione sync Azure AD Connect",
+    description: "Sincronizzazione delle utenze del dominio del Comune pilota.",
+    outcome: "fatto",
+    closingNote: "Sync attiva ogni 30 minuti, 412 utenze allineate.",
+    daysAgo: 12,
+    start: "09:30",
+    end: "11:00",
+    personIds: ["ppl-sara"],
+  },
+  {
+    id: "ente-c",
+    projectId: "prj-azure-comuni",
+    categoryId: "cat-azure-app",
+    title: "Migrazione Comune di Ravenna",
+    description: "Lift-and-shift delle VM applicative e del database.",
+    outcome: "fallita",
+    closingNote:
+      "Replica del database interrotta per timeout VPN. Riprogrammare con il NetOps del cliente.",
+    daysAgo: 4,
+    start: "10:00",
+    end: "12:00",
+    personIds: ["ppl-team-azure"],
+    slotNote: "Serve la VPN site-to-site attiva",
+  },
+  {
+    id: "qa-creds",
+    projectId: "prj-qa",
+    categoryId: "cat-qa-infra",
+    title: "Reset credenziali account di servizio QA",
+    description: "Rotazione delle password dopo l'uscita di un fornitore.",
+    outcome: "fatto",
+    closingNote: "Credenziali ruotate e salvate in Secrets Manager. Pipeline verdi.",
+    daysAgo: 21,
+    start: "11:00",
+    end: "11:30",
+    personIds: ["ppl-iam"],
+    requesterId: "ppl-helpdesk",
+  },
+  {
+    id: "qa-collaudo",
+    projectId: "prj-qa",
+    categoryId: "cat-qa-app",
+    title: "Collaudo release 4.2 in ambiente QA",
+    description: "Smoke test e collaudo funzionale prima del rilascio.",
+    outcome: "fallita",
+    closingNote: "Collaudo sospeso: dati di test non anonimizzati. Rimandato alla prossima sprint.",
+    daysAgo: 7,
+    start: "14:30",
+    end: "17:00",
+    personIds: ["ppl-giulia"],
+    requesterId: "ppl-giulia",
+  },
+]
+
+for (const execution of executions) {
+  const day = addDaysISO(-execution.daysAgo)
+  activities.push({
+    id: `act-log-${execution.id}`,
+    title: execution.title,
+    description: execution.description,
+    projectId: execution.projectId,
+    source: "altro",
+    requesterId: execution.requesterId ?? "ppl-tu",
+    type: "eseguo",
+    status: execution.outcome,
+    priority: "media",
+    waitingOnPersonId: null,
+    waitingReason: "",
+    closingNote: execution.closingNote,
+    attachments: [],
+    driveUrl: "",
+    categoryId: execution.categoryId,
+    createdAt: created,
+    updatedAt: created,
+  })
+  tasks.push({
+    id: `tsk-log-${execution.id}`,
+    activityId: `act-log-${execution.id}`,
+    startsAt: `${day}T${execution.start}`,
+    endsAt: execution.end ? `${day}T${execution.end}` : null,
+    personIds: execution.personIds ?? [],
+    notes: execution.slotNote ?? "",
+  })
+}
+
+export const EMPTY_STORE: NimbusStore = {
+  version: 4,
+  people: [],
+  projects: [],
+  activities: [],
+  tasks: [],
+}
+
+export const DEMO_STORE: NimbusStore = {
   version: 4,
   people,
   projects,

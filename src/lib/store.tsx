@@ -24,7 +24,7 @@ import {
 } from "@/lib/people"
 import { cloneProjectInStore, deleteActivityFromStore } from "@/lib/projects"
 import { defaultProjectColor } from "@/lib/project-color"
-import { SEED_STORE } from "@/lib/seed"
+import { DEMO_STORE, EMPTY_STORE } from "@/lib/seed"
 import {
   removeTaskFromStore,
   taskByActivityId,
@@ -64,20 +64,18 @@ type StoreContextValue = {
   upsertPerson: (name: string) => Person | null
   upsertCategory: (projectId: string, name: string) => Category | null
   replaceStore: (next: NimbusStore) => void
-  resetToSeed: () => void
+  resetToEmpty: () => void
+  readOnly: boolean
 }
 
-const EMPTY_STORE: NimbusStore = {
-  version: 4,
-  people: [],
-  projects: [],
-  activities: [],
-  tasks: [],
-}
+export type StoreMode = "user" | "demo"
+
+const READ_ONLY_MESSAGE = "Modalità esplorazione: sola lettura"
 
 const StoreContext = createContext<StoreContextValue | null>(null)
 
 let memory: NimbusStore = EMPTY_STORE
+let demoMode = false
 let hydrated = false
 let dirty = false
 let hydratePromise: Promise<void> | null = null
@@ -88,6 +86,7 @@ const hydratedListeners = new Set<() => void>()
 
 export function resetClientStore() {
   memory = EMPTY_STORE
+  demoMode = false
   hydrated = false
   dirty = false
   hydratePromise = null
@@ -173,6 +172,10 @@ function persist() {
 }
 
 function writeStore(next: NimbusStore) {
+  if (demoMode) {
+    toast.info(READ_ONLY_MESSAGE)
+    return
+  }
   dirty = true
   memory = next
   emit()
@@ -235,7 +238,7 @@ async function hydrateFromServer(): Promise<void> {
     }
   } catch {
     if (!dirty) {
-      memory = readLegacyLocalStore() ?? SEED_STORE
+      memory = readLegacyLocalStore() ?? EMPTY_STORE
       emit()
     }
     toast.error("Non riesco a caricare i dati dal server.")
@@ -245,9 +248,18 @@ async function hydrateFromServer(): Promise<void> {
   }
 }
 
-function ensureHydrated() {
+function hydrateDemo(): Promise<void> {
+  demoMode = true
+  memory = DEMO_STORE
+  hydrated = true
+  emit()
+  emitHydrated()
+  return Promise.resolve()
+}
+
+function ensureHydrated(mode: StoreMode) {
   if (!hydratePromise) {
-    hydratePromise = hydrateFromServer()
+    hydratePromise = mode === "demo" ? hydrateDemo() : hydrateFromServer()
   }
   return hydratePromise
 }
@@ -264,17 +276,24 @@ function withActivityPeople(
   )
 }
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function StoreProvider({
+  children,
+  mode = "user",
+}: {
+  children: ReactNode
+  mode?: StoreMode
+}) {
   const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   const isHydrated = useSyncExternalStore(
     subscribeHydrated,
     getHydratedSnapshot,
     getServerHydratedSnapshot,
   )
+  const readOnly = mode === "demo"
 
   useEffect(() => {
-    void ensureHydrated()
-  }, [])
+    void ensureHydrated(mode)
+  }, [mode])
 
   const addProject = useCallback(
     (input: Omit<Project, "id" | "createdAt" | "updatedAt">) => {
@@ -322,6 +341,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const cloneProject = useCallback((id: string) => {
+    if (demoMode) return null
     const result = cloneProjectInStore(getSnapshot(), id)
     if (!result.project) return null
     writeStore(result.store)
@@ -440,6 +460,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const uploadActivityFiles = useCallback(
     async (activityId: string, files: File[]) => {
       if (files.length === 0) return
+      if (demoMode) throw new Error(READ_ONLY_MESSAGE)
       const body = new FormData()
       for (const file of files) body.append("file", file)
       const response = await fetch(
@@ -471,6 +492,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const removeActivityAttachment = useCallback(
     async (activityId: string, attachmentId: string) => {
+      if (demoMode) throw new Error(READ_ONLY_MESSAGE)
       const response = await fetch(
         `/api/activities/${encodeURIComponent(activityId)}/attachments/${encodeURIComponent(attachmentId)}`,
         { method: "DELETE" },
@@ -511,8 +533,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     writeStore(next)
   }, [])
 
-  const resetToSeed = useCallback(() => {
-    writeStore(SEED_STORE)
+  const resetToEmpty = useCallback(() => {
+    writeStore(EMPTY_STORE)
   }, [])
 
   const value = useMemo<StoreContextValue>(
@@ -533,11 +555,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       upsertPerson,
       upsertCategory,
       replaceStore,
-      resetToSeed,
+      resetToEmpty,
+      readOnly,
     }),
     [
       store,
       isHydrated,
+      readOnly,
       addProject,
       updateProject,
       deleteProject,
@@ -552,7 +576,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       upsertPerson,
       upsertCategory,
       replaceStore,
-      resetToSeed,
+      resetToEmpty,
     ],
   )
 

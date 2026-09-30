@@ -24,7 +24,7 @@ export function ProjectRow({
   openCount: number
   onClone: (id: string) => void
 }) {
-  const { store } = useNimbus()
+  const { store, readOnly } = useNimbus()
   const peopleLabel = personNames(store.people, project.personIds)
 
   return (
@@ -68,7 +68,10 @@ export function ProjectRow({
               Drive
             </DropdownMenuItem>
           ) : null}
-          <DropdownMenuItem onClick={() => onClone(project.id)}>
+          <DropdownMenuItem
+            disabled={readOnly}
+            onClick={() => onClone(project.id)}
+          >
             <CopyIcon />
             Clona
           </DropdownMenuItem>

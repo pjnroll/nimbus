@@ -29,7 +29,8 @@ export default function ProjectDetailPage({
 }) {
   const { id } = use(params)
   const router = useRouter()
-  const { store, updateActivity, deleteActivity, cloneProject } = useNimbus()
+  const { store, updateActivity, deleteActivity, cloneProject, readOnly } =
+    useNimbus()
   const project = store.projects.find((item) => item.id === id)
   const [editing, setEditing] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -133,6 +134,7 @@ export default function ProjectDetailPage({
           ) : null}
           <Button
             variant="outline"
+            disabled={readOnly}
             onClick={() => {
               const copy = cloneProject(project.id)
               if (!copy) {

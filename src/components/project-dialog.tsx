@@ -100,8 +100,14 @@ function ProjectDialogForm({
   onCreated?: (id: string) => void
   onOpenChange: (open: boolean) => void
 }) {
-  const { store, addProject, updateProject, deleteProject, upsertPerson } =
-    useNimbus()
+  const {
+    store,
+    addProject,
+    updateProject,
+    deleteProject,
+    upsertPerson,
+    readOnly,
+  } = useNimbus()
   const [form, setForm] = useState<FormState>(() =>
     project ? fromProject(project) : emptyForm(),
   )
@@ -283,15 +289,21 @@ function ProjectDialogForm({
             variant="ghost"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={remove}
+            disabled={readOnly}
           >
             Elimina
           </Button>
         ) : null}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {readOnly ? (
+            <p className="text-xs text-muted-foreground">Sola lettura</p>
+          ) : null}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annulla
+            {readOnly ? "Chiudi" : "Annulla"}
           </Button>
-          <Button onClick={save}>Salva</Button>
+          <Button onClick={save} disabled={readOnly}>
+            Salva
+          </Button>
         </div>
       </DialogFooter>
     </DialogContent>
