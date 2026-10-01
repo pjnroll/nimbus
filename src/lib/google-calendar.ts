@@ -1,3 +1,5 @@
+import { addDaysISO, parseISODate } from "@/lib/dates"
+
 const GOOGLE_CALENDAR_TEMPLATE =
   "https://calendar.google.com/calendar/render?action=TEMPLATE"
 
@@ -46,6 +48,27 @@ export function buildGoogleCalendarEventUrl(input: {
     "dates",
     formatGoogleCalendarDates(input.startsAt, input.endsAt),
   )
+  const details = input.detailsLines
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n")
+  if (details) {
+    params.set("details", details)
+  }
+  return `${GOOGLE_CALENDAR_TEMPLATE}&${params.toString()}`
+}
+
+/** All-day Google Calendar event for a local ISO date (YYYY-MM-DD). */
+export function buildGoogleCalendarAllDayUrl(input: {
+  title: string
+  dateISO: string
+  detailsLines: string[]
+}): string {
+  const params = new URLSearchParams()
+  params.set("text", input.title.trim() || "Attività Nimbus")
+  const start = input.dateISO.replaceAll("-", "")
+  const end = addDaysISO(1, parseISODate(input.dateISO)).replaceAll("-", "")
+  params.set("dates", `${start}/${end}`)
   const details = input.detailsLines
     .map((line) => line.trim())
     .filter(Boolean)

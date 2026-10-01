@@ -1,4 +1,4 @@
-import { nowISO } from "@/lib/dates"
+import { isISODate, nowISO } from "@/lib/dates"
 import { coerceProjectColor } from "@/lib/project-color"
 import { safeHttpUrl } from "@/lib/urls"
 import {
@@ -6,6 +6,7 @@ import {
   isNimbusStore,
   isV2NimbusStore,
   isV3NimbusStore,
+  isV4NimbusStore,
   type Activity,
   type NimbusStore,
   type Person,
@@ -70,12 +71,17 @@ export function personNames(people: Person[], ids: string[]): string {
 }
 
 export function activityPersonIds(
-  activity: Pick<Activity, "requesterId" | "waitingOnPersonId">,
+  activity: Pick<
+    Activity,
+    "requesterId" | "ownerId" | "delegateId" | "waitingOnPersonId"
+  >,
   task?: Pick<Task, "personIds"> | null,
 ): string[] {
   const ids = [
     ...(task?.personIds ?? []),
     activity.requesterId,
+    activity.ownerId,
+    activity.delegateId,
     activity.waitingOnPersonId,
   ]
   return ids.filter((id): id is string => Boolean(id))
@@ -83,7 +89,10 @@ export function activityPersonIds(
 
 export function activityPersonHaystack(
   people: Person[],
-  activity: Pick<Activity, "requesterId" | "waitingOnPersonId">,
+  activity: Pick<
+    Activity,
+    "requesterId" | "ownerId" | "delegateId" | "waitingOnPersonId"
+  >,
   task?: Pick<Task, "personIds"> | null,
 ): string {
   return personNames(people, activityPersonIds(activity, task))
@@ -235,6 +244,14 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
         ? raw.source
         : "altro",
     requesterId: typeof raw.requesterId === "string" ? raw.requesterId : null,
+    ownerId:
+      typeof raw.ownerId === "string"
+        ? raw.ownerId
+        : typeof raw.requesterId === "string"
+          ? raw.requesterId
+          : null,
+    delegateId: typeof raw.delegateId === "string" ? raw.delegateId : null,
+    reminderOn: isISODate(raw.reminderOn) ? raw.reminderOn : null,
     type: raw.type === "coordino" ? "coordino" : "eseguo",
     status:
       raw.status === "inbox"
@@ -260,9 +277,17 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
 }
 
 function ensureStoreShape(store: NimbusStore): NimbusStore {
+  const activities = store.activities.map((activity) =>
+    normalizeActivity(activity as unknown as Record<string, unknown>),
+  )
+  const delegated = new Set(
+    activities
+      .filter((activity) => activity.delegateId)
+      .map((activity) => activity.id),
+  )
   return {
     ...store,
-    version: 4,
+    version: 5,
     people: store.people.map((person) => ({
       ...person,
       name: text(person.name, MAX_SHORT_TEXT),
@@ -284,10 +309,10 @@ function ensureStoreShape(store: NimbusStore): NimbusStore {
           }))
         : [],
     })),
-    activities: store.activities.map((activity) =>
-      normalizeActivity(activity as unknown as Record<string, unknown>),
+    activities,
+    tasks: coerceTasks(store.tasks).filter(
+      (task) => !delegated.has(task.activityId),
     ),
-    tasks: coerceTasks(store.tasks),
   }
 }
 
@@ -350,7 +375,7 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
     })
   })
 
-  return { version: 4, people, projects, activities, tasks: [] }
+  return { version: 5, people, projects, activities, tasks: [] }
 }
 
 export function migrateV2Store(value: unknown): NimbusStore {
@@ -408,11 +433,19 @@ export function migrateV3Store(value: unknown): NimbusStore {
     return normalizeActivity(raw)
   })
   return {
-    version: 4,
+    version: 5,
     people: v3.people,
     projects: v3.projects,
     activities,
     tasks,
+  }
+}
+
+export function migrateV4Store(value: unknown): NimbusStore {
+  const v4 = value as Omit<NimbusStore, "version"> & { version: 4 }
+  return {
+    ...v4,
+    version: 5,
   }
 }
 
@@ -421,6 +454,9 @@ export function coerceNimbusStore(
 ): { store: NimbusStore; migrated: boolean } | null {
   if (isNimbusStore(value)) {
     return { store: ensureStoreShape(value), migrated: false }
+  }
+  if (isV4NimbusStore(value)) {
+    return { store: ensureStoreShape(migrateV4Store(value)), migrated: true }
   }
   if (isV3NimbusStore(value)) {
     return { store: ensureStoreShape(migrateV3Store(value)), migrated: true }

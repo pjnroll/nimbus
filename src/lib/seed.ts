@@ -18,7 +18,7 @@ const people: Person[] = [
   { id: "ppl-cloudwatch", name: "Monitoraggio CloudWatch" },
   { id: "ppl-marco", name: "Marco Bianchi" },
   { id: "ppl-referente-it", name: "Referente IT cliente" },
-  { id: "ppl-tu", name: "Tu" },
+  { id: "ppl-tu", name: "Pier Luigi Laviano" },
 ]
 
 const projects: Project[] = [
@@ -77,7 +77,19 @@ const projects: Project[] = [
   },
 ]
 
-const activities: Activity[] = [
+type SeedActivity = Omit<Activity, "ownerId" | "delegateId" | "reminderOn"> &
+  Partial<Pick<Activity, "ownerId" | "delegateId" | "reminderOn">>
+
+function completeActivity(activity: SeedActivity): Activity {
+  return {
+    ...activity,
+    ownerId: activity.ownerId ?? "ppl-tu",
+    delegateId: activity.delegateId ?? null,
+    reminderOn: activity.reminderOn ?? null,
+  }
+}
+
+const activities: SeedActivity[] = [
   {
     id: "act-plan-rimini",
     title: "Nuovo ambiente di collaudo per il Comune di Rimini",
@@ -86,6 +98,9 @@ const activities: Activity[] = [
     projectId: null,
     source: "altro",
     requesterId: "ppl-paolo",
+    ownerId: "ppl-tu",
+    delegateId: "ppl-sara",
+    reminderOn: addDaysISO(10),
     type: "eseguo",
     status: "in_attesa",
     priority: "alta",
@@ -533,7 +548,7 @@ for (const execution of executions) {
 }
 
 export const EMPTY_STORE: NimbusStore = {
-  version: 4,
+  version: 5,
   people: [],
   projects: [],
   activities: [],
@@ -541,9 +556,9 @@ export const EMPTY_STORE: NimbusStore = {
 }
 
 export const DEMO_STORE: NimbusStore = {
-  version: 4,
+  version: 5,
   people,
   projects,
-  activities,
+  activities: activities.map(completeActivity),
   tasks,
 }

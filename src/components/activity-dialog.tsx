@@ -26,7 +26,10 @@ import {
   TYPE_LABELS,
 } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
-import { buildGoogleCalendarEventUrl } from "@/lib/google-calendar"
+import {
+  buildGoogleCalendarAllDayUrl,
+  buildGoogleCalendarEventUrl,
+} from "@/lib/google-calendar"
 import { personName, personNames } from "@/lib/people"
 import { safeHttpUrl } from "@/lib/urls"
 import {
@@ -57,6 +60,9 @@ type FormState = {
   projectId: string
   source: ActivitySource
   requesterId: string | null
+  ownerId: string | null
+  delegateId: string | null
+  reminderOn: string
   type: ActivityType
   status: ActivityStatus
   priority: Priority
@@ -79,6 +85,9 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   projectId: NONE_PROJECT,
   source: "altro",
   requesterId: null,
+  ownerId: null,
+  delegateId: null,
+  reminderOn: "",
   type: "eseguo",
   status: "in_attesa",
   priority: "media",
@@ -108,6 +117,9 @@ function fromActivity(
     projectId: activity.projectId ?? NONE_PROJECT,
     source: activity.source || "altro",
     requesterId: activity.requesterId,
+    ownerId: activity.ownerId,
+    delegateId: activity.delegateId,
+    reminderOn: activity.reminderOn ?? "",
     type: activity.type,
     status,
     priority: activity.priority,
@@ -194,26 +206,38 @@ function ActivityDialogForm({
     setForm((current) => ({ ...current, [key]: value }))
   }
 
-  function applyTask(activityId: string) {
-    if (form.taskPlanned) {
-      if (!form.taskDate) {
-        throw new Error("Per il task serve almeno la data.")
-      }
-      const startsAt = buildStartsAt(form.taskDate, form.taskStart)
-      const endsAt =
-        form.taskEnd.trim()
-          ? buildStartsAt(form.taskDate, form.taskEnd)
-          : null
-      upsertTask({
-        activityId,
-        startsAt,
-        endsAt,
-        personIds: form.taskPersonIds,
-        notes: form.taskNotes.trim(),
-      })
-    } else if (existingTask) {
-      removeTask(activityId)
+  function clearTaskFields(current: FormState): FormState {
+    return {
+      ...current,
+      taskPlanned: false,
+      taskDate: "",
+      taskStart: "",
+      taskEnd: "",
+      taskPersonIds: [],
+      taskNotes: "",
     }
+  }
+
+  function applyTask(activityId: string) {
+    if (form.delegateId || !form.taskPlanned) {
+      if (existingTask) removeTask(activityId)
+      return
+    }
+    if (!form.taskDate) {
+      throw new Error("Per il task serve almeno la data.")
+    }
+    const startsAt = buildStartsAt(form.taskDate, form.taskStart)
+    const endsAt =
+      form.taskEnd.trim()
+        ? buildStartsAt(form.taskDate, form.taskEnd)
+        : null
+    upsertTask({
+      activityId,
+      startsAt,
+      endsAt,
+      personIds: form.taskPersonIds,
+      notes: form.taskNotes.trim(),
+    })
   }
 
   async function save() {
@@ -222,6 +246,10 @@ function ActivityDialogForm({
       return
     }
     if (!form.requesterId) {
+      setError("Serve il richiedente dell'attività.")
+      return
+    }
+    if (!form.ownerId) {
       setError("Serve il referente dell'attività.")
       return
     }
@@ -229,7 +257,7 @@ function ActivityDialogForm({
       setError("Il link Drive deve iniziare con http:// o https://")
       return
     }
-    if (form.taskPlanned && !form.taskDate) {
+    if (form.taskPlanned && !form.delegateId && !form.taskDate) {
       setError("Per pianificare il task serve una data.")
       return
     }
@@ -239,6 +267,9 @@ function ActivityDialogForm({
       projectId: form.projectId === NONE_PROJECT ? null : form.projectId,
       source: form.source,
       requesterId: form.requesterId,
+      ownerId: form.ownerId,
+      delegateId: form.delegateId,
+      reminderOn: form.reminderOn.trim() || null,
       type: form.type,
       status: form.status === "inbox" ? "in_attesa" : form.status,
       priority: form.priority,
@@ -288,31 +319,45 @@ function ActivityDialogForm({
       : (store.projects.find((project) => project.id === form.projectId)
           ?.personIds ?? [])
 
-  const googleCalendarUrl = useMemo(() => {
-    if (!form.taskPlanned || !form.taskDate) return null
-    const startsAt = buildStartsAt(form.taskDate, form.taskStart)
-    const endsAt = form.taskEnd.trim()
-      ? buildStartsAt(form.taskDate, form.taskEnd)
-      : null
+  const eventTitle = useMemo(() => {
     const project =
       form.projectId !== NONE_PROJECT
         ? store.projects.find((item) => item.id === form.projectId)
         : undefined
     const titleBase = form.title.trim() || "Attività"
-    const eventTitle = project?.name
-      ? `${project.name} · ${titleBase}`
-      : titleBase
-    const executors = personNames(store.people, form.taskPersonIds)
-    const referente = personName(store.people, form.requesterId)
+    return project?.name ? `${project.name} · ${titleBase}` : titleBase
+  }, [form.projectId, form.title, store.projects])
+
+  const calendarDetails = useMemo(() => {
     const detailsLines: string[] = []
     if (form.description.trim()) {
       detailsLines.push(form.description.trim())
     }
+    const richiedente = personName(store.people, form.requesterId)
+    const referente = personName(store.people, form.ownerId)
+    const delegato = personName(store.people, form.delegateId)
+    if (richiedente) detailsLines.push(`Richiedente: ${richiedente}`)
+    if (referente) detailsLines.push(`Referente: ${referente}`)
+    if (delegato) detailsLines.push(`Delegato: ${delegato}`)
+    return detailsLines
+  }, [
+    form.description,
+    form.requesterId,
+    form.ownerId,
+    form.delegateId,
+    store.people,
+  ])
+
+  const googleCalendarUrl = useMemo(() => {
+    if (form.delegateId || !form.taskPlanned || !form.taskDate) return null
+    const startsAt = buildStartsAt(form.taskDate, form.taskStart)
+    const endsAt = form.taskEnd.trim()
+      ? buildStartsAt(form.taskDate, form.taskEnd)
+      : null
+    const executors = personNames(store.people, form.taskPersonIds)
+    const detailsLines = [...calendarDetails]
     if (form.taskNotes.trim()) {
       detailsLines.push(`Nota slot: ${form.taskNotes.trim()}`)
-    }
-    if (referente) {
-      detailsLines.push(`Referente: ${referente}`)
     }
     if (executors) {
       detailsLines.push(`Esecutore/i: ${executors}`)
@@ -326,7 +371,20 @@ function ActivityDialogForm({
       endsAt,
       detailsLines,
     })
-  }, [form, store.projects, store.people])
+  }, [form, store.people, calendarDetails, eventTitle])
+
+  const reminderCalendarUrl = useMemo(() => {
+    if (!form.reminderOn) return null
+    const detailsLines = [...calendarDetails]
+    if (form.driveUrl.trim()) {
+      detailsLines.push(`Drive: ${form.driveUrl.trim()}`)
+    }
+    return buildGoogleCalendarAllDayUrl({
+      title: eventTitle,
+      dateISO: form.reminderOn,
+      detailsLines,
+    })
+  }, [form.reminderOn, form.driveUrl, calendarDetails, eventTitle])
   const savedAttachments = activity
     ? (store.activities.find((item) => item.id === activity.id)?.attachments ??
       activity.attachments)
@@ -357,7 +415,7 @@ function ActivityDialogForm({
               placeholder="Dettagli o contesto"
             />
           </FormField>
-          <FormField label="Referente" htmlFor="act-req">
+          <FormField label="Richiedente" htmlFor="act-req">
             <PersonField
               id="act-req"
               people={store.people}
@@ -365,8 +423,39 @@ function ActivityDialogForm({
               onChange={(ids) => patch("requesterId", ids[0] ?? null)}
               onCreate={upsertPerson}
               multiple={false}
-              placeholder="Nome del referente"
+              placeholder="Nome del richiedente"
             />
+          </FormField>
+          <FormField label="Referente" htmlFor="act-owner">
+            <PersonField
+              id="act-owner"
+              people={store.people}
+              value={form.ownerId ? [form.ownerId] : []}
+              onChange={(ids) => patch("ownerId", ids[0] ?? null)}
+              onCreate={upsertPerson}
+              multiple={false}
+              placeholder="Chi deve chiudere l'attività"
+            />
+          </FormField>
+          <FormField label="Delegato" htmlFor="act-delegate">
+            <PersonField
+              id="act-delegate"
+              people={store.people}
+              value={form.delegateId ? [form.delegateId] : []}
+              onChange={(ids) => {
+                const delegateId = ids[0] ?? null
+                setForm((current) => {
+                  const next = { ...current, delegateId }
+                  return delegateId ? clearTaskFields(next) : next
+                })
+              }}
+              onCreate={upsertPerson}
+              multiple={false}
+              placeholder="A chi deleghi (opzionale)"
+            />
+            <p className="text-xs text-muted-foreground">
+              Se deleghi, il task lo prende in carico il delegato.
+            </p>
           </FormField>
           <FormField label="Link Drive" htmlFor="act-drive">
             <Input
@@ -507,13 +596,50 @@ function ActivityDialogForm({
                 />
               </FormField>
             ) : null}
+            <FormField label="Scadenza / reminder" htmlFor="act-reminder">
+              <Input
+                id="act-reminder"
+                type="date"
+                value={form.reminderOn}
+                onChange={(event) => patch("reminderOn", event.target.value)}
+              />
+              {form.reminderOn && reminderCalendarUrl ? (
+                <div className="grid gap-1.5">
+                  <a
+                    href={reminderCalendarUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      buttonVariants({ variant: "outline" }),
+                      "w-full justify-center sm:w-auto",
+                    )}
+                  >
+                    <CalendarIcon />
+                    Aggiungi al calendario
+                  </a>
+                  <p className="text-xs text-muted-foreground">
+                    Evento giornaliero sulla data di scadenza.
+                  </p>
+                </div>
+              ) : null}
+            </FormField>
           </FormSection>
           <FormSection title="Task">
-            {!form.taskPlanned ? (
+            {form.delegateId ? (
+              <p className="text-sm text-muted-foreground">
+                Attività delegata: il task lo crea il delegato.
+              </p>
+            ) : !form.taskPlanned ? (
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => patch("taskPlanned", true)}
+                onClick={() =>
+                  setForm((current) => ({
+                    ...current,
+                    taskPlanned: true,
+                    delegateId: null,
+                  }))
+                }
               >
                 Pianifica esecuzione
               </Button>

@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CategoryBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/status-badges"
-import { todayISO } from "@/lib/dates"
+import { formatDateIT, todayISO } from "@/lib/dates"
 import { categoryName } from "@/lib/categories"
 import { personName, personNames } from "@/lib/people"
 import { projectBorderClass } from "@/lib/project-color"
@@ -64,6 +64,8 @@ export function ActivityCard({
   const [expanded, setExpanded] = useState(false)
   const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
+  const ownerName = personName(store.people, activity.ownerId)
+  const delegateName = personName(store.people, activity.delegateId)
   const taskPeople = task ? personNames(store.people, task.personIds) : ""
   const categoryLabel = categoryName(project, activity.categoryId)
   const overdue =
@@ -129,6 +131,11 @@ export function ActivityCard({
               {overdue ? "In ritardo · " : ""}
               {formatTaskSlotIT(task)}
               {!dense && taskPeople ? ` · Esecutore/i: ${taskPeople}` : ""}
+            </p>
+          ) : null}
+          {!dense && !task && activity.reminderOn ? (
+            <p className="mt-1 text-sm font-medium text-foreground">
+              Scadenza · {formatDateIT(activity.reminderOn)}
             </p>
           ) : null}
         </button>
@@ -224,6 +231,11 @@ export function ActivityCard({
                 {taskPeople ? ` · Esecutore/i: ${taskPeople}` : ""}
               </p>
             ) : null}
+            {!task && activity.reminderOn ? (
+              <p className="mb-1 text-xs font-medium text-foreground">
+                Scadenza · {formatDateIT(activity.reminderOn)}
+              </p>
+            ) : null}
             <p className="line-clamp-3 text-sm text-muted-foreground">
               {activity.description ||
                 "Nessuna nota. Apri per completare o pianificare."}
@@ -233,12 +245,24 @@ export function ActivityCard({
                 Chiusura: {activity.closingNote}
               </p>
             ) : null}
-            {requesterName || !project ? (
+            {requesterName || ownerName || delegateName || !project ? (
               <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 {requesterName ? (
                   <div>
-                    <dt className="inline">Referente</dt>
+                    <dt className="inline">Richiedente</dt>
                     <dd className="inline"> · {requesterName}</dd>
+                  </div>
+                ) : null}
+                {ownerName ? (
+                  <div>
+                    <dt className="inline">Referente</dt>
+                    <dd className="inline"> · {ownerName}</dd>
+                  </div>
+                ) : null}
+                {delegateName ? (
+                  <div>
+                    <dt className="inline">Delegato</dt>
+                    <dd className="inline"> · {delegateName}</dd>
                   </div>
                 ) : null}
                 {!project ? (

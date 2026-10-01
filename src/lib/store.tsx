@@ -266,7 +266,10 @@ function ensureHydrated(mode: StoreMode) {
 
 function withActivityPeople(
   store: NimbusStore,
-  activity: Pick<Activity, "projectId" | "requesterId" | "waitingOnPersonId">,
+  activity: Pick<
+    Activity,
+    "projectId" | "requesterId" | "ownerId" | "delegateId" | "waitingOnPersonId"
+  >,
   task?: Pick<Task, "personIds"> | null,
 ): NimbusStore {
   return linkPeopleToProject(
