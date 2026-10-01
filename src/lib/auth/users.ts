@@ -1,6 +1,7 @@
 import type { SessionUser } from "@/lib/auth/token"
 import { isNotFound, usersFilePath } from "@/lib/data-dir"
 import { nowISO } from "@/lib/dates"
+import { isValidEmail, normalizeEmail } from "@/lib/email"
 import { enqueue, writeJsonAtomic } from "@/lib/persist-fs"
 import { provisionUserStore } from "@/lib/persist-store"
 import { readFile } from "node:fs/promises"
@@ -60,14 +61,6 @@ function coerceUsersFile(value: unknown): UsersFile | null {
 
 function toPublic(user: UserRecord): SessionUser {
   return { id: user.id, email: user.email }
-}
-
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase()
-}
-
-export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
 function envAllowsRegister(): boolean {

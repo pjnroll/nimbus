@@ -1,4 +1,5 @@
 import { addDaysISO, parseISODate } from "@/lib/dates"
+import { isValidEmail, normalizeEmail } from "@/lib/email"
 
 const GOOGLE_CALENDAR_TEMPLATE =
   "https://calendar.google.com/calendar/render?action=TEMPLATE"
@@ -41,6 +42,7 @@ export function buildGoogleCalendarEventUrl(input: {
   startsAt: string
   endsAt: string | null
   detailsLines: string[]
+  guestEmails?: string[]
 }): string {
   const params = new URLSearchParams()
   params.set("text", input.title.trim() || "Attività Nimbus")
@@ -54,6 +56,16 @@ export function buildGoogleCalendarEventUrl(input: {
     .join("\n")
   if (details) {
     params.set("details", details)
+  }
+  const guests = [
+    ...new Set(
+      (input.guestEmails ?? [])
+        .map((email) => normalizeEmail(email))
+        .filter((email) => isValidEmail(email)),
+    ),
+  ]
+  if (guests.length > 0) {
+    params.set("add", guests.join(","))
   }
   return `${GOOGLE_CALENDAR_TEMPLATE}&${params.toString()}`
 }

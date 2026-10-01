@@ -17,6 +17,7 @@ export type Person = {
   id: string
   name: string
   kind: PersonKind
+  email: string
   memberIds: string[]
   archivedAt: string | null
 }

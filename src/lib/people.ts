@@ -1,4 +1,5 @@
 import { isISODate, nowISO } from "@/lib/dates"
+import { isValidEmail, normalizeEmail } from "@/lib/email"
 import { coerceProjectColor } from "@/lib/project-color"
 import { safeHttpUrl } from "@/lib/urls"
 import {
@@ -56,6 +57,12 @@ export function uniqueStringIds(value: unknown): string[] {
   return ids
 }
 
+function coercePersonEmail(raw: unknown): string {
+  if (typeof raw !== "string") return ""
+  const email = normalizeEmail(raw)
+  return isValidEmail(email) ? email : ""
+}
+
 export function inferPersonKind(name: string): PersonKind {
   return /^team\s/i.test(name.trim()) ? "team" : "persona"
 }
@@ -63,11 +70,13 @@ export function inferPersonKind(name: string): PersonKind {
 export function makePerson(
   name: string,
   kind: PersonKind = "persona",
+  email = "",
 ): Person {
   return {
     id: newId(),
     name,
     kind,
+    email: coercePersonEmail(email),
     memberIds: [],
     archivedAt: null,
   }
@@ -102,6 +111,37 @@ export function personNames(people: Person[], ids: string[]): string {
     .map((id) => personName(people, id))
     .filter(Boolean)
     .join(", ")
+}
+
+export function calendarGuestEmails(
+  people: Person[],
+  executorIds: string[],
+): string[] {
+  const seen = new Set<string>()
+  const emails: string[] = []
+
+  function addEmail(email: string) {
+    const normalized = coercePersonEmail(email)
+    if (!normalized || seen.has(normalized)) return
+    seen.add(normalized)
+    emails.push(normalized)
+  }
+
+  function collect(id: string, expandTeam: boolean) {
+    const person = personById(people, id)
+    if (!person) return
+    addEmail(person.email)
+    if (expandTeam && person.kind === "team") {
+      for (const memberId of person.memberIds) {
+        collect(memberId, false)
+      }
+    }
+  }
+
+  for (const id of uniqueStringIds(executorIds)) {
+    collect(id, true)
+  }
+  return emails
 }
 
 export function activePeople(people: Person[]): Person[] {
@@ -160,7 +200,7 @@ export function upsertPersonInStore(
 export function updatePersonInStore(
   store: NimbusStore,
   id: string,
-  patch: Partial<Pick<Person, "name" | "kind" | "memberIds" | "archivedAt">>,
+  patch: Partial<Pick<Person, "name" | "kind" | "email" | "memberIds" | "archivedAt">>,
 ): NimbusStore {
   return {
     ...store,
@@ -177,6 +217,10 @@ export function updatePersonInStore(
         ...person,
         name: name || person.name,
         kind,
+        email:
+          patch.email === undefined
+            ? person.email
+            : coercePersonEmail(patch.email),
         memberIds,
         archivedAt:
           patch.archivedAt === undefined ? person.archivedAt : patch.archivedAt,
@@ -337,6 +381,7 @@ function coercePerson(raw: unknown): Person | null {
     id: candidate.id,
     name,
     kind,
+    email: coercePersonEmail(candidate.email),
     memberIds: kind === "team" ? uniqueStringIds(candidate.memberIds) : [],
     archivedAt:
       typeof candidate.archivedAt === "string" ? candidate.archivedAt : null,

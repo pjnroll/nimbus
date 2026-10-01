@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { PERSON_KIND_LABELS } from "@/lib/labels"
+import { isValidEmail, normalizeEmail } from "@/lib/email"
 import { cleanPersonName, findPersonByName } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
 import type { Person, PersonKind } from "@/lib/types"
@@ -22,17 +23,19 @@ import type { Person, PersonKind } from "@/lib/types"
 type FormState = {
   name: string
   kind: PersonKind
+  email: string
   memberIds: string[]
 }
 
 function emptyForm(kind: PersonKind): FormState {
-  return { name: "", kind, memberIds: [] }
+  return { name: "", kind, email: "", memberIds: [] }
 }
 
 function fromPerson(person: Person): FormState {
   return {
     name: person.name,
     kind: person.kind,
+    email: person.email,
     memberIds: person.memberIds,
   }
 }
@@ -94,10 +97,20 @@ function PersonDialogForm({
       setError("Esiste già una persona o un team con questo nome.")
       return
     }
+    const email = normalizeEmail(form.email)
+    if (!email) {
+      setError("Serve un indirizzo email.")
+      return
+    }
+    if (!isValidEmail(email)) {
+      setError("L’indirizzo email non è valido.")
+      return
+    }
     if (person) {
       updatePerson(person.id, {
         name,
         kind: form.kind,
+        email,
         memberIds: form.kind === "team" ? form.memberIds : [],
       })
       toast.success("Anagrafica aggiornata")
@@ -107,9 +120,11 @@ function PersonDialogForm({
         setError("Non riesco a creare l’anagrafica.")
         return
       }
-      if (form.kind === "team" && form.memberIds.length > 0) {
-        updatePerson(created.id, { kind: "team", memberIds: form.memberIds })
-      }
+      updatePerson(created.id, {
+        kind: form.kind,
+        email,
+        memberIds: form.kind === "team" ? form.memberIds : [],
+      })
       toast.success(form.kind === "team" ? "Team creato" : "Persona creata")
     }
     onOpenChange(false)
@@ -154,6 +169,25 @@ function PersonDialogForm({
               form.kind === "team" ? "Es. NetOps" : "Nome e cognome"
             }
           />
+        </FormField>
+        <FormField label="Email" htmlFor="ppl-email">
+          <Input
+            id="ppl-email"
+            type="email"
+            value={form.email}
+            onChange={(event) => setForm({ ...form, email: event.target.value })}
+            placeholder={
+              form.kind === "team"
+                ? "casella@organizzazione.it"
+                : "nome.cognome@organizzazione.it"
+            }
+            autoComplete="email"
+          />
+          <p className="text-xs text-muted-foreground">
+            {form.kind === "team"
+              ? "Casella del team: usata come ospite quando il team esegue uno slot."
+              : "Usata come ospite quando la persona è esecutore di uno slot in calendario."}
+          </p>
         </FormField>
         <FormField label="Tipo" htmlFor="ppl-kind">
           <AppSelect

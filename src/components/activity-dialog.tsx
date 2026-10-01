@@ -26,7 +26,7 @@ import {
   buildGoogleCalendarAllDayUrl,
   buildGoogleCalendarEventUrl,
 } from "@/lib/google-calendar"
-import { personName, personNames } from "@/lib/people"
+import { personName, personNames, calendarGuestEmails } from "@/lib/people"
 import { safeHttpUrl } from "@/lib/urls"
 import {
   buildStartsAt,
@@ -357,6 +357,7 @@ function ActivityDialogForm({
       startsAt,
       endsAt,
       detailsLines,
+      guestEmails: calendarGuestEmails(store.people, form.taskExecutorIds),
     })
   }, [form, store.people, calendarDetails, eventTitle])
 
@@ -679,7 +680,10 @@ function ActivityDialogForm({
                       Aggiungi al calendario
                     </a>
                     <p className="text-xs text-muted-foreground">
-                      Apre Google Calendar con titolo e orario già compilati.
+                      Apre Google Calendar con titolo, orario e ospiti già
+                      compilati. Gli esecutori con email in anagrafica vengono
+                      invitati; gli inviti partono quando salvi l’evento in
+                      Calendar.
                     </p>
                   </div>
                 ) : null}

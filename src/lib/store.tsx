@@ -67,7 +67,7 @@ type StoreContextValue = {
   upsertPerson: (name: string, kind?: Person["kind"]) => Person | null
   updatePerson: (
     id: string,
-    patch: Partial<Pick<Person, "name" | "kind" | "memberIds" | "archivedAt">>,
+    patch: Partial<Pick<Person, "name" | "kind" | "email" | "memberIds" | "archivedAt">>,
   ) => void
   archivePerson: (id: string) => void
   restorePerson: (id: string) => void
@@ -547,7 +547,7 @@ export function StoreProvider({
   const updatePerson = useCallback(
     (
       id: string,
-      patch: Partial<Pick<Person, "name" | "kind" | "memberIds" | "archivedAt">>,
+      patch: Partial<Pick<Person, "name" | "kind" | "email" | "memberIds" | "archivedAt">>,
     ) => {
       writeStore(updatePersonInStore(getSnapshot(), id, patch))
     },

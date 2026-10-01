@@ -16,26 +16,33 @@ function person(
   name: string,
   kind: PersonKind = "persona",
   memberIds: string[] = [],
+  email = "",
 ): Person {
-  return { id, name, kind, memberIds, archivedAt: null }
+  return { id, name, kind, email, memberIds, archivedAt: null }
 }
 
 const people: Person[] = [
-  person("ppl-andrea", "Andrea Rossi"),
-  person("ppl-laura", "Laura Conti"),
-  person("ppl-netops", "NetOps", "team"),
-  person("ppl-sara", "Sara Greco"),
-  person("ppl-team-azure", "team Azure", "team"),
-  person("ppl-referente", "Referente cliente"),
-  person("ppl-helpdesk", "Helpdesk interno", "team"),
-  person("ppl-iam", "team IAM", "team"),
-  person("ppl-paolo", "Paolo Mancini"),
-  person("ppl-giulia", "Giulia Ferri"),
-  person("ppl-cloudwatch", "Monitoraggio CloudWatch", "team"),
-  person("ppl-marco", "Marco Bianchi"),
-  person("ppl-luca", "Luca Neri"),
-  person("ppl-referente-it", "Referente IT cliente"),
-  person("ppl-tu", "Pier Luigi Laviano"),
+  person("ppl-andrea", "Andrea Rossi", "persona", [], "andrea.rossi@nimbus.example"),
+  person("ppl-laura", "Laura Conti", "persona", [], "laura.conti@nimbus.example"),
+  person("ppl-netops", "NetOps", "team", [], "netops@nimbus.example"),
+  person("ppl-sara", "Sara Greco", "persona", [], "sara.greco@nimbus.example"),
+  person("ppl-team-azure", "team Azure", "team", [], "azure@nimbus.example"),
+  person("ppl-referente", "Referente cliente", "persona", [], "referente.cliente@nimbus.example"),
+  person("ppl-helpdesk", "Helpdesk interno", "team", [], "helpdesk@nimbus.example"),
+  person("ppl-iam", "team IAM", "team", [], "iam@nimbus.example"),
+  person("ppl-paolo", "Paolo Mancini", "persona", [], "paolo.mancini@nimbus.example"),
+  person("ppl-giulia", "Giulia Ferri", "persona", [], "giulia.ferri@nimbus.example"),
+  person("ppl-cloudwatch", "Monitoraggio CloudWatch", "team", [], "cloudwatch@nimbus.example"),
+  person("ppl-marco", "Marco Bianchi", "persona", [], "marco.bianchi@nimbus.example"),
+  person("ppl-luca", "Luca Neri", "persona", [], "luca.neri@nimbus.example"),
+  person(
+    "ppl-referente-it",
+    "Referente IT cliente",
+    "persona",
+    [],
+    "referente.it@nimbus.example",
+  ),
+  person("ppl-tu", "Pier Luigi Laviano", "persona", [], "pier.luigi.laviano@nimbus.example"),
 ]
 
 const projects: Project[] = [

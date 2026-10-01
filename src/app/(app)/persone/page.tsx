@@ -22,9 +22,13 @@ export default function PersonePage() {
   const filtered = useMemo(() => {
     const needle = personNameKey(query)
     return store.people
-      .filter((person) =>
-        needle ? personNameKey(person.name).includes(needle) : true,
-      )
+      .filter((person) => {
+        if (!needle) return true
+        return (
+          personNameKey(person.name).includes(needle) ||
+          person.email.toLocaleLowerCase("it").includes(needle)
+        )
+      })
       .sort((a, b) => a.name.localeCompare(b.name, "it"))
   }, [store.people, query])
 
@@ -70,14 +74,14 @@ export default function PersonePage() {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Cerca persone e team"
+              placeholder="Cerca nome o email"
             />
           </div>
           {filtered.length === 0 ? (
             <EmptyState
               icon={SearchXIcon}
               title="Nessun risultato"
-              description="Prova un altro nome."
+              description="Prova un altro nome o un’email."
             />
           ) : (
             <div className="space-y-8">
@@ -137,13 +141,16 @@ function PersonGroup({
               <span className="font-heading block truncate font-medium">
                 {person.name}
               </span>
-              {person.kind === "team" && person.memberIds.length > 0 ? (
-                <span className="text-xs text-muted-foreground">
-                  {person.memberIds.length === 1
-                    ? "1 membro"
-                    : `${person.memberIds.length} membri`}
-                </span>
-              ) : null}
+              <span className="block truncate text-xs text-muted-foreground">
+                {person.email || "Email mancante"}
+                {person.kind === "team" && person.memberIds.length > 0
+                  ? ` · ${
+                      person.memberIds.length === 1
+                        ? "1 membro"
+                        : `${person.memberIds.length} membri`
+                    }`
+                  : ""}
+              </span>
             </span>
             <Badge
               variant="outline"
