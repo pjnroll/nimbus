@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CategoryBadge, PriorityBadge, StatusBadge, TypeBadge } from "@/components/status-badges"
+import { CategoryBadge, PriorityBadge, StatusBadge } from "@/components/status-badges"
 import { formatDateIT, todayISO } from "@/lib/dates"
 import { categoryName } from "@/lib/categories"
 import { personName, personNames } from "@/lib/people"
@@ -64,9 +64,10 @@ export function ActivityCard({
   const [expanded, setExpanded] = useState(false)
   const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
-  const ownerName = personName(store.people, activity.ownerId)
-  const delegateName = personName(store.people, activity.delegateId)
-  const taskPeople = task ? personNames(store.people, task.personIds) : ""
+  const responsibleName = personName(store.people, activity.responsibleId)
+  const participantNames = personNames(store.people, activity.participantIds)
+  const waitingName = personName(store.people, activity.waitingOnPersonId)
+  const taskPeople = task ? personNames(store.people, task.executorIds) : ""
   const categoryLabel = categoryName(project, activity.categoryId)
   const overdue =
     !closedActivity(activity.status) &&
@@ -130,12 +131,18 @@ export function ActivityCard({
             >
               {overdue ? "In ritardo · " : ""}
               {formatTaskSlotIT(task)}
-              {!dense && taskPeople ? ` · Esecutore/i: ${taskPeople}` : ""}
+              {!dense && taskPeople ? ` · Esecutori · ${taskPeople}` : ""}
             </p>
           ) : null}
           {!dense && !task && activity.reminderOn ? (
             <p className="mt-1 text-sm font-medium text-foreground">
               Scadenza · {formatDateIT(activity.reminderOn)}
+            </p>
+          ) : null}
+          {!dense && waitingName ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              In attesa di · {waitingName}
+              {activity.waitingReason ? ` · ${activity.waitingReason}` : ""}
             </p>
           ) : null}
         </button>
@@ -215,7 +222,6 @@ export function ActivityCard({
           >
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
               <StatusBadge status={activity.status} />
-              <TypeBadge type={activity.type} />
               <PriorityBadge priority={activity.priority} />
               {categoryLabel ? <CategoryBadge name={categoryLabel} /> : null}
             </div>
@@ -228,7 +234,7 @@ export function ActivityCard({
               >
                 {overdue ? "In ritardo · " : ""}
                 {formatTaskSlotIT(task)}
-                {taskPeople ? ` · Esecutore/i: ${taskPeople}` : ""}
+                {taskPeople ? ` · Esecutori · ${taskPeople}` : ""}
               </p>
             ) : null}
             {!task && activity.reminderOn ? (
@@ -245,24 +251,40 @@ export function ActivityCard({
                 Chiusura: {activity.closingNote}
               </p>
             ) : null}
-            {requesterName || ownerName || delegateName || !project ? (
+            {requesterName ||
+            responsibleName ||
+            participantNames ||
+            waitingName ||
+            !project ? (
               <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {responsibleName ? (
+                  <div>
+                    <dt className="inline">Responsabile</dt>
+                    <dd className="inline"> · {responsibleName}</dd>
+                  </div>
+                ) : null}
                 {requesterName ? (
                   <div>
-                    <dt className="inline">Richiedente</dt>
+                    <dt className="inline">Richiesto da</dt>
                     <dd className="inline"> · {requesterName}</dd>
                   </div>
                 ) : null}
-                {ownerName ? (
+                {participantNames ? (
                   <div>
-                    <dt className="inline">Referente</dt>
-                    <dd className="inline"> · {ownerName}</dd>
+                    <dt className="inline">Coinvolti</dt>
+                    <dd className="inline"> · {participantNames}</dd>
                   </div>
                 ) : null}
-                {delegateName ? (
+                {waitingName ? (
                   <div>
-                    <dt className="inline">Delegato</dt>
-                    <dd className="inline"> · {delegateName}</dd>
+                    <dt className="inline">In attesa di</dt>
+                    <dd className="inline">
+                      {" "}
+                      · {waitingName}
+                      {activity.waitingReason
+                        ? ` · ${activity.waitingReason}`
+                        : ""}
+                    </dd>
                   </div>
                 ) : null}
                 {!project ? (

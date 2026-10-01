@@ -13,7 +13,7 @@ import { CategoryBadge } from "@/components/status-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
-import { personNames } from "@/lib/people"
+import { personName, personNames } from "@/lib/people"
 import { projectLogEntries } from "@/lib/project-log"
 import { openActivities, sortByTaskThenPriority } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
@@ -37,8 +37,11 @@ export default function ProjectDetailPage({
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Activity | null>(null)
   const [categoryFilter, setCategoryFilter] = useState(ALL)
+  const managerName = project
+    ? personName(store.people, project.managerId)
+    : ""
   const peopleLabel = project
-    ? personNames(store.people, project.personIds)
+    ? personNames(store.people, project.participantIds)
     : ""
 
   useEffect(() => {
@@ -109,8 +112,17 @@ export default function ProjectDetailPage({
           {project.notes ? (
             <p className="mt-3 max-w-2xl text-sm leading-relaxed">{project.notes}</p>
           ) : null}
+          {managerName ? (
+            <p className="mt-2 text-sm">
+              <span className="text-muted-foreground">Project Manager</span>
+              {" · "}
+              {managerName}
+            </p>
+          ) : null}
           {peopleLabel ? (
-            <p className="mt-2 text-sm text-muted-foreground">{peopleLabel}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Persone e Team · {peopleLabel}
+            </p>
           ) : null}
           {project.categories.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-1.5">

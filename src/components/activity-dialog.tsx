@@ -20,11 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  PRIORITY_LABELS,
-  STATUS_LABELS,
-  TYPE_LABELS,
-} from "@/lib/labels"
+import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
 import {
   buildGoogleCalendarAllDayUrl,
@@ -43,7 +39,6 @@ import {
   type Activity,
   type ActivitySource,
   type ActivityStatus,
-  type ActivityType,
   type Priority,
 } from "@/lib/types"
 
@@ -60,10 +55,9 @@ type FormState = {
   projectId: string
   source: ActivitySource
   requesterId: string | null
-  ownerId: string | null
-  delegateId: string | null
+  responsibleId: string | null
+  participantIds: string[]
   reminderOn: string
-  type: ActivityType
   status: ActivityStatus
   priority: Priority
   waitingOnPersonId: string | null
@@ -74,7 +68,7 @@ type FormState = {
   taskDate: string
   taskStart: string
   taskEnd: string
-  taskPersonIds: string[]
+  taskExecutorIds: string[]
   taskNotes: string
   taskPlanned: boolean
 }
@@ -85,10 +79,9 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   projectId: NONE_PROJECT,
   source: "altro",
   requesterId: null,
-  ownerId: null,
-  delegateId: null,
+  responsibleId: null,
+  participantIds: [],
   reminderOn: "",
-  type: "eseguo",
   status: "in_attesa",
   priority: "media",
   waitingOnPersonId: null,
@@ -99,7 +92,7 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   taskDate: "",
   taskStart: "",
   taskEnd: "",
-  taskPersonIds: [],
+  taskExecutorIds: [],
   taskNotes: "",
   taskPlanned: false,
   ...defaults,
@@ -117,10 +110,9 @@ function fromActivity(
     projectId: activity.projectId ?? NONE_PROJECT,
     source: activity.source || "altro",
     requesterId: activity.requesterId,
-    ownerId: activity.ownerId,
-    delegateId: activity.delegateId,
+    responsibleId: activity.responsibleId,
+    participantIds: activity.participantIds,
     reminderOn: activity.reminderOn ?? "",
-    type: activity.type,
     status,
     priority: activity.priority,
     waitingOnPersonId: activity.waitingOnPersonId,
@@ -131,7 +123,7 @@ function fromActivity(
     taskDate: task ? taskDate(task.startsAt) : "",
     taskStart: task ? taskTime(task.startsAt) : "",
     taskEnd: task ? taskTime(task.endsAt) : "",
-    taskPersonIds: task?.personIds ?? [],
+    taskExecutorIds: task?.executorIds ?? [],
     taskNotes: task?.notes ?? "",
     taskPlanned: Boolean(task),
   }
@@ -206,20 +198,8 @@ function ActivityDialogForm({
     setForm((current) => ({ ...current, [key]: value }))
   }
 
-  function clearTaskFields(current: FormState): FormState {
-    return {
-      ...current,
-      taskPlanned: false,
-      taskDate: "",
-      taskStart: "",
-      taskEnd: "",
-      taskPersonIds: [],
-      taskNotes: "",
-    }
-  }
-
   function applyTask(activityId: string) {
-    if (form.delegateId || !form.taskPlanned) {
+    if (!form.taskPlanned) {
       if (existingTask) removeTask(activityId)
       return
     }
@@ -235,7 +215,7 @@ function ActivityDialogForm({
       activityId,
       startsAt,
       endsAt,
-      personIds: form.taskPersonIds,
+      executorIds: form.taskExecutorIds,
       notes: form.taskNotes.trim(),
     })
   }
@@ -245,19 +225,15 @@ function ActivityDialogForm({
       setError("Serve un titolo, anche breve.")
       return
     }
-    if (!form.requesterId) {
-      setError("Serve il richiedente dell'attività.")
-      return
-    }
-    if (!form.ownerId) {
-      setError("Serve il referente dell'attività.")
+    if (!form.responsibleId) {
+      setError("Serve il responsabile dell'attività.")
       return
     }
     if (form.driveUrl.trim() && !safeHttpUrl(form.driveUrl)) {
       setError("Il link Drive deve iniziare con http:// o https://")
       return
     }
-    if (form.taskPlanned && !form.delegateId && !form.taskDate) {
+    if (form.taskPlanned && !form.taskDate) {
       setError("Per pianificare il task serve una data.")
       return
     }
@@ -267,10 +243,9 @@ function ActivityDialogForm({
       projectId: form.projectId === NONE_PROJECT ? null : form.projectId,
       source: form.source,
       requesterId: form.requesterId,
-      ownerId: form.ownerId,
-      delegateId: form.delegateId,
+      responsibleId: form.responsibleId,
+      participantIds: form.participantIds,
       reminderOn: form.reminderOn.trim() || null,
-      type: form.type,
       status: form.status === "inbox" ? "in_attesa" : form.status,
       priority: form.priority,
       waitingOnPersonId: form.waitingOnPersonId,
@@ -317,7 +292,7 @@ function ActivityDialogForm({
     form.projectId === NONE_PROJECT
       ? []
       : (store.projects.find((project) => project.id === form.projectId)
-          ?.personIds ?? [])
+          ?.participantIds ?? [])
 
   const eventTitle = useMemo(() => {
     const project =
@@ -333,34 +308,43 @@ function ActivityDialogForm({
     if (form.description.trim()) {
       detailsLines.push(form.description.trim())
     }
-    const richiedente = personName(store.people, form.requesterId)
-    const referente = personName(store.people, form.ownerId)
-    const delegato = personName(store.people, form.delegateId)
-    if (richiedente) detailsLines.push(`Richiedente: ${richiedente}`)
-    if (referente) detailsLines.push(`Referente: ${referente}`)
-    if (delegato) detailsLines.push(`Delegato: ${delegato}`)
+    const requester = personName(store.people, form.requesterId)
+    const responsible = personName(store.people, form.responsibleId)
+    const participants = personNames(store.people, form.participantIds)
+    if (requester) detailsLines.push(`Richiesto da: ${requester}`)
+    if (responsible) detailsLines.push(`Responsabile: ${responsible}`)
+    if (participants) detailsLines.push(`Coinvolti: ${participants}`)
+    const waiting = personName(store.people, form.waitingOnPersonId)
+    if (waiting) {
+      detailsLines.push(`In attesa di: ${waiting}`)
+      if (form.waitingReason.trim()) {
+        detailsLines.push(`Motivo: ${form.waitingReason.trim()}`)
+      }
+    }
     return detailsLines
   }, [
     form.description,
     form.requesterId,
-    form.ownerId,
-    form.delegateId,
+    form.responsibleId,
+    form.participantIds,
+    form.waitingOnPersonId,
+    form.waitingReason,
     store.people,
   ])
 
   const googleCalendarUrl = useMemo(() => {
-    if (form.delegateId || !form.taskPlanned || !form.taskDate) return null
+    if (!form.taskPlanned || !form.taskDate) return null
     const startsAt = buildStartsAt(form.taskDate, form.taskStart)
     const endsAt = form.taskEnd.trim()
       ? buildStartsAt(form.taskDate, form.taskEnd)
       : null
-    const executors = personNames(store.people, form.taskPersonIds)
+    const executors = personNames(store.people, form.taskExecutorIds)
     const detailsLines = [...calendarDetails]
     if (form.taskNotes.trim()) {
       detailsLines.push(`Nota slot: ${form.taskNotes.trim()}`)
     }
     if (executors) {
-      detailsLines.push(`Esecutore/i: ${executors}`)
+      detailsLines.push(`Esecutori: ${executors}`)
     }
     if (form.driveUrl.trim()) {
       detailsLines.push(`Drive: ${form.driveUrl.trim()}`)
@@ -406,86 +390,105 @@ function ActivityDialogForm({
         />
       </DialogHeader>
       <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto pr-1 md:grid-cols-2 sm:max-h-[min(70vh,42rem)] sm:flex-none">
-        <FormSection title="Contesto">
-          <FormField label="Note" htmlFor="act-desc">
-            <Textarea
-              id="act-desc"
-              value={form.description}
-              onChange={(event) => patch("description", event.target.value)}
-              placeholder="Dettagli o contesto"
-            />
-          </FormField>
-          <FormField label="Richiedente" htmlFor="act-req">
-            <PersonField
-              id="act-req"
-              people={store.people}
-              value={form.requesterId ? [form.requesterId] : []}
-              onChange={(ids) => patch("requesterId", ids[0] ?? null)}
-              onCreate={upsertPerson}
-              multiple={false}
-              placeholder="Nome del richiedente"
-            />
-          </FormField>
-          <FormField label="Referente" htmlFor="act-owner">
-            <PersonField
-              id="act-owner"
-              people={store.people}
-              value={form.ownerId ? [form.ownerId] : []}
-              onChange={(ids) => patch("ownerId", ids[0] ?? null)}
-              onCreate={upsertPerson}
-              multiple={false}
-              placeholder="Chi deve chiudere l'attività"
-            />
-          </FormField>
-          <FormField label="Delegato" htmlFor="act-delegate">
-            <PersonField
-              id="act-delegate"
-              people={store.people}
-              value={form.delegateId ? [form.delegateId] : []}
-              onChange={(ids) => {
-                const delegateId = ids[0] ?? null
-                setForm((current) => {
-                  const next = { ...current, delegateId }
-                  return delegateId ? clearTaskFields(next) : next
-                })
-              }}
-              onCreate={upsertPerson}
-              multiple={false}
-              placeholder="A chi deleghi (opzionale)"
-            />
-            <p className="text-xs text-muted-foreground">
-              Se deleghi, il task lo prende in carico il delegato.
-            </p>
-          </FormField>
-          <FormField label="Link Drive" htmlFor="act-drive">
-            <Input
-              id="act-drive"
-              value={form.driveUrl}
-              onChange={(event) => patch("driveUrl", event.target.value)}
-              placeholder="https://drive.google.com/..."
-            />
-          </FormField>
-          <FormField label="Allegati" htmlFor="act-files">
-            <ActivityAttachmentsField
-              activityId={activity?.id}
-              attachments={savedAttachments}
-              pendingFiles={pendingFiles}
-              onPendingFiles={setPendingFiles}
-              onUpload={
-                activity
-                  ? (files) => uploadActivityFiles(activity.id, files)
-                  : undefined
-              }
-              onRemove={
-                activity
-                  ? (attachmentId) =>
-                      removeActivityAttachment(activity.id, attachmentId)
-                  : undefined
-              }
-              disabled={busy || readOnly}
-            />
-          </FormField>
-        </FormSection>
+        <div className="grid content-start gap-6">
+          <FormSection title="Responsabilità">
+            <FormField label="Responsabile" htmlFor="act-responsible">
+              <PersonField
+                id="act-responsible"
+                people={store.people}
+                value={form.responsibleId ? [form.responsibleId] : []}
+                onChange={(ids) => patch("responsibleId", ids[0] ?? null)}
+                onCreate={upsertPerson}
+                multiple={false}
+                suggestIds={projectPeople}
+                placeholder="Chi è accountable del risultato"
+              />
+            </FormField>
+            <FormField label="Richiesto da" htmlFor="act-req">
+              <PersonField
+                id="act-req"
+                people={store.people}
+                value={form.requesterId ? [form.requesterId] : []}
+                onChange={(ids) => patch("requesterId", ids[0] ?? null)}
+                onCreate={upsertPerson}
+                multiple={false}
+                placeholder="Chi ha originato la richiesta"
+              />
+            </FormField>
+            <FormField label="Coinvolti" htmlFor="act-participants">
+              <PersonField
+                id="act-participants"
+                people={store.people}
+                value={form.participantIds}
+                onChange={(ids) => patch("participantIds", ids)}
+                onCreate={upsertPerson}
+                suggestIds={projectPeople}
+                placeholder="Persone o team da tenere in copia"
+              />
+            </FormField>
+            <FormField label="In attesa di" htmlFor="act-waiting">
+              <PersonField
+                id="act-waiting"
+                people={store.people}
+                value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
+                onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
+                onCreate={upsertPerson}
+                multiple={false}
+                placeholder="Chi ci sta bloccando, se serve"
+              />
+            </FormField>
+            {form.waitingOnPersonId ? (
+              <FormField label="Motivo dell’attesa" htmlFor="act-waiting-reason">
+                <Input
+                  id="act-waiting-reason"
+                  value={form.waitingReason}
+                  onChange={(event) =>
+                    patch("waitingReason", event.target.value)
+                  }
+                  placeholder="Es. Attendiamo certificato VPN"
+                />
+              </FormField>
+            ) : null}
+          </FormSection>
+          <FormSection title="Contesto">
+            <FormField label="Note" htmlFor="act-desc">
+              <Textarea
+                id="act-desc"
+                value={form.description}
+                onChange={(event) => patch("description", event.target.value)}
+                placeholder="Dettagli o contesto"
+              />
+            </FormField>
+            <FormField label="Link Drive" htmlFor="act-drive">
+              <Input
+                id="act-drive"
+                value={form.driveUrl}
+                onChange={(event) => patch("driveUrl", event.target.value)}
+                placeholder="https://drive.google.com/..."
+              />
+            </FormField>
+            <FormField label="Allegati" htmlFor="act-files">
+              <ActivityAttachmentsField
+                activityId={activity?.id}
+                attachments={savedAttachments}
+                pendingFiles={pendingFiles}
+                onPendingFiles={setPendingFiles}
+                onUpload={
+                  activity
+                    ? (files) => uploadActivityFiles(activity.id, files)
+                    : undefined
+                }
+                onRemove={
+                  activity
+                    ? (attachmentId) =>
+                        removeActivityAttachment(activity.id, attachmentId)
+                    : undefined
+                }
+                disabled={busy || readOnly}
+              />
+            </FormField>
+          </FormSection>
+        </div>
         <div className="grid content-start gap-6">
           <FormSection title="Piano">
             <FormField label="Progetto" htmlFor="act-project">
@@ -552,17 +555,6 @@ function ActivityDialogForm({
               </FormField>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Tipo" htmlFor="act-type">
-                <AppSelect
-                  id="act-type"
-                  value={form.type}
-                  onChange={(value) => patch("type", value as ActivityType)}
-                  options={Object.entries(TYPE_LABELS).map(([value, label]) => ({
-                    value,
-                    label,
-                  }))}
-                />
-              </FormField>
               <FormField label="Stato" htmlFor="act-status">
                 <AppSelect
                   id="act-status"
@@ -624,12 +616,8 @@ function ActivityDialogForm({
               ) : null}
             </FormField>
           </FormSection>
-          <FormSection title="Task">
-            {form.delegateId ? (
-              <p className="text-sm text-muted-foreground">
-                Attività delegata: il task lo crea il delegato.
-              </p>
-            ) : !form.taskPlanned ? (
+          <FormSection title="Pianificazione">
+            {!form.taskPlanned ? (
               <Button
                 type="button"
                 variant="outline"
@@ -637,7 +625,6 @@ function ActivityDialogForm({
                   setForm((current) => ({
                     ...current,
                     taskPlanned: true,
-                    delegateId: null,
                   }))
                 }
               >
@@ -671,15 +658,15 @@ function ActivityDialogForm({
                     />
                   </FormField>
                 </div>
-                <FormField label="Esecutore/i" htmlFor="task-people">
+                <FormField label="Esecutori" htmlFor="task-people">
                   <PersonField
                     id="task-people"
                     people={store.people}
-                    value={form.taskPersonIds}
-                    onChange={(ids) => patch("taskPersonIds", ids)}
+                    value={form.taskExecutorIds}
+                    onChange={(ids) => patch("taskExecutorIds", ids)}
                     onCreate={upsertPerson}
                     suggestIds={projectPeople}
-                    placeholder="Chi esegue il task"
+                    placeholder="Chi esegue materialmente lo slot"
                   />
                 </FormField>
                 <FormField label="Nota dello slot" htmlFor="task-notes">
@@ -720,7 +707,7 @@ function ActivityDialogForm({
                       taskDate: "",
                       taskStart: "",
                       taskEnd: "",
-                      taskPersonIds: [],
+                      taskExecutorIds: [],
                       taskNotes: "",
                     }))
                   }

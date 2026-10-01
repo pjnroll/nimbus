@@ -17,9 +17,12 @@ import {
 import { nowISO } from "@/lib/dates"
 import {
   activityPersonIds,
+  archivePersonInStore,
   coerceNimbusStore,
   linkPeopleToProject,
   newId,
+  restorePersonInStore,
+  updatePersonInStore,
   upsertPersonInStore,
 } from "@/lib/people"
 import { cloneProjectInStore, deleteActivityFromStore } from "@/lib/projects"
@@ -61,7 +64,13 @@ type StoreContextValue = {
     activityId: string,
     attachmentId: string,
   ) => Promise<void>
-  upsertPerson: (name: string) => Person | null
+  upsertPerson: (name: string, kind?: Person["kind"]) => Person | null
+  updatePerson: (
+    id: string,
+    patch: Partial<Pick<Person, "name" | "kind" | "memberIds" | "archivedAt">>,
+  ) => void
+  archivePerson: (id: string) => void
+  restorePerson: (id: string) => void
   upsertCategory: (projectId: string, name: string) => Category | null
   replaceStore: (next: NimbusStore) => void
   resetToEmpty: () => void
@@ -268,9 +277,13 @@ function withActivityPeople(
   store: NimbusStore,
   activity: Pick<
     Activity,
-    "projectId" | "requesterId" | "ownerId" | "delegateId" | "waitingOnPersonId"
+    | "projectId"
+    | "requesterId"
+    | "responsibleId"
+    | "participantIds"
+    | "waitingOnPersonId"
   >,
-  task?: Pick<Task, "personIds"> | null,
+  task?: Pick<Task, "executorIds"> | null,
 ): NimbusStore {
   return linkPeopleToProject(
     store,
@@ -523,12 +536,30 @@ export function StoreProvider({
     [],
   )
 
-  const upsertPerson = useCallback((name: string) => {
-    const result = upsertPersonInStore(getSnapshot(), name)
+  const upsertPerson = useCallback((name: string, kind?: Person["kind"]) => {
+    const result = upsertPersonInStore(getSnapshot(), name, kind)
     if (result.person && result.store !== getSnapshot()) {
       writeStore(result.store)
     }
     return result.person
+  }, [])
+
+  const updatePerson = useCallback(
+    (
+      id: string,
+      patch: Partial<Pick<Person, "name" | "kind" | "memberIds" | "archivedAt">>,
+    ) => {
+      writeStore(updatePersonInStore(getSnapshot(), id, patch))
+    },
+    [],
+  )
+
+  const archivePerson = useCallback((id: string) => {
+    writeStore(archivePersonInStore(getSnapshot(), id))
+  }, [])
+
+  const restorePerson = useCallback((id: string) => {
+    writeStore(restorePersonInStore(getSnapshot(), id))
   }, [])
 
   const upsertCategory = useCallback((projectId: string, name: string) => {
@@ -563,6 +594,9 @@ export function StoreProvider({
       uploadActivityFiles,
       removeActivityAttachment,
       upsertPerson,
+      updatePerson,
+      archivePerson,
+      restorePerson,
       upsertCategory,
       replaceStore,
       resetToEmpty,
@@ -584,6 +618,9 @@ export function StoreProvider({
       uploadActivityFiles,
       removeActivityAttachment,
       upsertPerson,
+      updatePerson,
+      archivePerson,
+      restorePerson,
       upsertCategory,
       replaceStore,
       resetToEmpty,

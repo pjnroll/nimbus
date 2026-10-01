@@ -7,12 +7,17 @@ import {
   isV2NimbusStore,
   isV3NimbusStore,
   isV4NimbusStore,
+  isV5NimbusStore,
   type Activity,
   type NimbusStore,
   type Person,
+  type PersonKind,
   type Project,
   type Task,
 } from "@/lib/types"
+
+const MAX_SHORT_TEXT = 300
+const MAX_LONG_TEXT = 10_000
 
 export function newId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -37,6 +42,35 @@ export function splitPeopleList(raw: string): string[] {
     .split(",")
     .map((part) => cleanPersonName(part))
     .filter(Boolean)
+}
+
+export function uniqueStringIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const ids: string[] = []
+  for (const item of value) {
+    if (typeof item !== "string" || !item || seen.has(item)) continue
+    seen.add(item)
+    ids.push(item)
+  }
+  return ids
+}
+
+export function inferPersonKind(name: string): PersonKind {
+  return /^team\s/i.test(name.trim()) ? "team" : "persona"
+}
+
+export function makePerson(
+  name: string,
+  kind: PersonKind = "persona",
+): Person {
+  return {
+    id: newId(),
+    name,
+    kind,
+    memberIds: [],
+    archivedAt: null,
+  }
 }
 
 export function findPersonByName(
@@ -70,30 +104,39 @@ export function personNames(people: Person[], ids: string[]): string {
     .join(", ")
 }
 
+export function activePeople(people: Person[]): Person[] {
+  return people.filter((person) => !person.archivedAt)
+}
+
 export function activityPersonIds(
   activity: Pick<
     Activity,
-    "requesterId" | "ownerId" | "delegateId" | "waitingOnPersonId"
+    | "requesterId"
+    | "responsibleId"
+    | "participantIds"
+    | "waitingOnPersonId"
   >,
-  task?: Pick<Task, "personIds"> | null,
+  task?: Pick<Task, "executorIds"> | null,
 ): string[] {
-  const ids = [
-    ...(task?.personIds ?? []),
+  return uniqueStringIds([
+    ...(task?.executorIds ?? []),
+    ...(activity.participantIds ?? []),
     activity.requesterId,
-    activity.ownerId,
-    activity.delegateId,
+    activity.responsibleId,
     activity.waitingOnPersonId,
-  ]
-  return ids.filter((id): id is string => Boolean(id))
+  ])
 }
 
 export function activityPersonHaystack(
   people: Person[],
   activity: Pick<
     Activity,
-    "requesterId" | "ownerId" | "delegateId" | "waitingOnPersonId"
+    | "requesterId"
+    | "responsibleId"
+    | "participantIds"
+    | "waitingOnPersonId"
   >,
-  task?: Pick<Task, "personIds"> | null,
+  task?: Pick<Task, "executorIds"> | null,
 ): string {
   return personNames(people, activityPersonIds(activity, task))
 }
@@ -101,16 +144,59 @@ export function activityPersonHaystack(
 export function upsertPersonInStore(
   store: NimbusStore,
   raw: string,
+  kind: PersonKind = "persona",
 ): { store: NimbusStore; person: Person | null } {
   const name = cleanPersonName(raw)
   if (!name) return { store, person: null }
   const existing = findPersonByName(store.people, name)
   if (existing) return { store, person: existing }
-  const person: Person = { id: newId(), name }
+  const person = makePerson(name, kind)
   return {
     store: { ...store, people: [...store.people, person] },
     person,
   }
+}
+
+export function updatePersonInStore(
+  store: NimbusStore,
+  id: string,
+  patch: Partial<Pick<Person, "name" | "kind" | "memberIds" | "archivedAt">>,
+): NimbusStore {
+  return {
+    ...store,
+    people: store.people.map((person) => {
+      if (person.id !== id) return person
+      const name =
+        patch.name === undefined ? person.name : cleanPersonName(patch.name)
+      const kind = patch.kind ?? person.kind
+      const memberIds =
+        kind === "team"
+          ? uniqueStringIds(patch.memberIds ?? person.memberIds)
+          : []
+      return {
+        ...person,
+        name: name || person.name,
+        kind,
+        memberIds,
+        archivedAt:
+          patch.archivedAt === undefined ? person.archivedAt : patch.archivedAt,
+      }
+    }),
+  }
+}
+
+export function archivePersonInStore(
+  store: NimbusStore,
+  id: string,
+): NimbusStore {
+  return updatePersonInStore(store, id, { archivedAt: nowISO() })
+}
+
+export function restorePersonInStore(
+  store: NimbusStore,
+  id: string,
+): NimbusStore {
+  return updatePersonInStore(store, id, { archivedAt: null })
 }
 
 export function ensurePersonOnProject(
@@ -119,12 +205,16 @@ export function ensurePersonOnProject(
   personId: string,
 ): NimbusStore {
   const project = store.projects.find((item) => item.id === projectId)
-  if (!project || project.personIds.includes(personId)) return store
+  if (!project || project.participantIds.includes(personId)) return store
   return {
     ...store,
     projects: store.projects.map((item) =>
       item.id === projectId
-        ? { ...item, personIds: [...item.personIds, personId], updatedAt: nowISO() }
+        ? {
+            ...item,
+            participantIds: [...item.participantIds, personId],
+            updatedAt: nowISO(),
+          }
         : item,
     ),
   }
@@ -153,7 +243,7 @@ function upsertFromName(
   const key = personNameKey(name)
   const existing = byKey.get(key)
   if (existing) return existing.id
-  const person: Person = { id: newId(), name }
+  const person = makePerson(name, inferPersonKind(name))
   people.push(person)
   byKey.set(key, person)
   return person.id
@@ -166,6 +256,10 @@ export function safeMimeType(value: unknown): string {
     )
     ? value.trim()
     : "application/octet-stream"
+}
+
+function text(value: unknown, max: number): string {
+  return typeof value === "string" ? value.slice(0, max) : ""
 }
 
 function coerceAttachments(value: unknown): Activity["attachments"] {
@@ -203,9 +297,11 @@ function coerceTasks(value: unknown): Task[] {
   const seenActivity = new Set<string>()
   for (const item of value) {
     if (!item || typeof item !== "object") continue
-    const candidate = item as Partial<Task>
+    const candidate = item as Record<string, unknown>
     if (typeof candidate.id !== "string" || !candidate.id) continue
-    if (typeof candidate.activityId !== "string" || !candidate.activityId) continue
+    if (typeof candidate.activityId !== "string" || !candidate.activityId) {
+      continue
+    }
     if (typeof candidate.startsAt !== "string" || !candidate.startsAt) continue
     if (seenActivity.has(candidate.activityId)) continue
     seenActivity.add(candidate.activityId)
@@ -217,23 +313,76 @@ function coerceTasks(value: unknown): Task[] {
         typeof candidate.endsAt === "string" && candidate.endsAt
           ? candidate.endsAt
           : null,
-      personIds: Array.isArray(candidate.personIds)
-        ? candidate.personIds.filter((id): id is string => typeof id === "string")
-        : [],
+      executorIds: uniqueStringIds(
+        Array.isArray(candidate.executorIds)
+          ? candidate.executorIds
+          : candidate.personIds,
+      ),
       notes: text(candidate.notes, MAX_LONG_TEXT),
     })
   }
   return tasks
 }
 
-const MAX_SHORT_TEXT = 300
-const MAX_LONG_TEXT = 10_000
+function coercePerson(raw: unknown): Person | null {
+  if (!raw || typeof raw !== "object") return null
+  const candidate = raw as Record<string, unknown>
+  if (typeof candidate.id !== "string" || !candidate.id) return null
+  const name = text(candidate.name, MAX_SHORT_TEXT)
+  const kind: PersonKind =
+    candidate.kind === "team" || candidate.kind === "persona"
+      ? candidate.kind
+      : inferPersonKind(name)
+  return {
+    id: candidate.id,
+    name,
+    kind,
+    memberIds: kind === "team" ? uniqueStringIds(candidate.memberIds) : [],
+    archivedAt:
+      typeof candidate.archivedAt === "string" ? candidate.archivedAt : null,
+  }
+}
 
-function text(value: unknown, max: number): string {
-  return typeof value === "string" ? value.slice(0, max) : ""
+function coerceProject(raw: unknown): Project | null {
+  if (!raw || typeof raw !== "object") return null
+  const candidate = raw as Record<string, unknown>
+  if (typeof candidate.id !== "string" || !candidate.id) return null
+  const status =
+    candidate.status === "in_attesa" || candidate.status === "chiuso"
+      ? candidate.status
+      : "attivo"
+  return {
+    id: candidate.id,
+    name: text(candidate.name, MAX_SHORT_TEXT),
+    client: text(candidate.client, MAX_SHORT_TEXT),
+    status,
+    color: coerceProjectColor(candidate.color, candidate.id),
+    driveUrl: safeHttpUrl(text(candidate.driveUrl, MAX_LONG_TEXT)),
+    managerId: typeof candidate.managerId === "string" ? candidate.managerId : null,
+    participantIds: uniqueStringIds(
+      Array.isArray(candidate.participantIds)
+        ? candidate.participantIds
+        : candidate.personIds,
+    ),
+    categories: Array.isArray(candidate.categories)
+      ? candidate.categories.flatMap((category) => {
+          if (!category || typeof category !== "object") return []
+          const item = category as { id?: unknown; name?: unknown }
+          if (typeof item.id !== "string" || !item.id) return []
+          return [{ id: item.id, name: text(item.name, MAX_SHORT_TEXT) }]
+        })
+      : [],
+    notes: text(candidate.notes, MAX_LONG_TEXT),
+    createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : nowISO(),
+    updatedAt: typeof candidate.updatedAt === "string" ? candidate.updatedAt : nowISO(),
+  }
 }
 
 function normalizeActivity(raw: Record<string, unknown>): Activity {
+  const requesterId =
+    typeof raw.requesterId === "string" ? raw.requesterId : null
+  const responsibleId =
+    typeof raw.responsibleId === "string" ? raw.responsibleId : null
   return {
     id: String(raw.id ?? ""),
     title: text(raw.title, MAX_SHORT_TEXT),
@@ -243,16 +392,10 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
       raw.source === "email" || raw.source === "chat" || raw.source === "altro"
         ? raw.source
         : "altro",
-    requesterId: typeof raw.requesterId === "string" ? raw.requesterId : null,
-    ownerId:
-      typeof raw.ownerId === "string"
-        ? raw.ownerId
-        : typeof raw.requesterId === "string"
-          ? raw.requesterId
-          : null,
-    delegateId: typeof raw.delegateId === "string" ? raw.delegateId : null,
+    requesterId,
+    responsibleId,
+    participantIds: uniqueStringIds(raw.participantIds),
     reminderOn: isISODate(raw.reminderOn) ? raw.reminderOn : null,
-    type: raw.type === "coordino" ? "coordino" : "eseguo",
     status:
       raw.status === "inbox"
         ? "in_attesa"
@@ -277,55 +420,41 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
 }
 
 function ensureStoreShape(store: NimbusStore): NimbusStore {
-  const activities = store.activities.map((activity) =>
-    normalizeActivity(activity as unknown as Record<string, unknown>),
-  )
-  const delegated = new Set(
-    activities
-      .filter((activity) => activity.delegateId)
-      .map((activity) => activity.id),
-  )
   return {
     ...store,
-    version: 5,
-    people: store.people.map((person) => ({
-      ...person,
-      name: text(person.name, MAX_SHORT_TEXT),
-    })),
-    projects: store.projects.map((project) => ({
-      ...project,
-      name: text(project.name, MAX_SHORT_TEXT),
-      client: text(project.client, MAX_SHORT_TEXT),
-      notes: text(project.notes, MAX_LONG_TEXT),
-      driveUrl: safeHttpUrl(text(project.driveUrl, MAX_LONG_TEXT)),
-      color: coerceProjectColor(
-        (project as Project & { color?: unknown }).color,
-        project.id,
-      ),
-      categories: Array.isArray(project.categories)
-        ? project.categories.map((category) => ({
-            ...category,
-            name: text(category.name, MAX_SHORT_TEXT),
-          }))
-        : [],
-    })),
-    activities,
-    tasks: coerceTasks(store.tasks).filter(
-      (task) => !delegated.has(task.activityId),
+    version: 6,
+    people: store.people
+      .map((person) => coercePerson(person))
+      .filter((person): person is Person => Boolean(person)),
+    projects: store.projects
+      .map((project) => coerceProject(project))
+      .filter((project): project is Project => Boolean(project)),
+    activities: store.activities.map((activity) =>
+      normalizeActivity(activity as unknown as Record<string, unknown>),
     ),
+    tasks: coerceTasks(store.tasks),
   }
 }
 
-type LegacyProject = Omit<Project, "personIds" | "categories"> & {
+type LegacyProject = {
+  id: string
+  name: string
+  client: string
+  status: Project["status"]
+  driveUrl: string
+  notes: string
+  createdAt: string
+  updatedAt: string
   people?: unknown
+  color?: unknown
 }
+
 type LegacyActivity = {
   id: string
   title: string
   description: string
   projectId: string | null
   source: Activity["source"]
-  type: Activity["type"]
   status: Activity["status"]
   priority: Activity["priority"]
   waitingReason: string
@@ -337,7 +466,74 @@ type LegacyActivity = {
   closingNote?: unknown
 }
 
-export function migrateLegacyStore(value: unknown): NimbusStore {
+type StoreV5 = {
+  version: 5
+  people: unknown[]
+  projects: unknown[]
+  activities: unknown[]
+  tasks: unknown[]
+}
+
+/**
+ * v5 → v6:
+ * - ownerId → responsibleId (fallback requesterId)
+ * - delegateId → activity.participantIds (preserves involvement, not execution)
+ * - type eseguo/coordino dropped
+ * - project.personIds → participantIds; managerId stays null
+ * - task.personIds → executorIds
+ * - Person.kind inferred (team if name starts with "team ")
+ *
+ * Tasks that coexisted with delegateId are kept. The old XOR filter is gone.
+ */
+export function migrateV5ToV6(value: unknown): NimbusStore {
+  const v5 = value as StoreV5
+  const people = v5.people
+    .map((person) => coercePerson(person))
+    .filter((person): person is Person => Boolean(person))
+  const projects = v5.projects
+    .map((project) => coerceProject(project))
+    .filter((project): project is Project => Boolean(project))
+    .map((project) => ({ ...project, managerId: project.managerId ?? null }))
+  const activities = v5.activities.map((item) => {
+    const raw =
+      item && typeof item === "object"
+        ? (item as Record<string, unknown>)
+        : {}
+    const ownerId = typeof raw.ownerId === "string" ? raw.ownerId : null
+    const requesterId =
+      typeof raw.requesterId === "string" ? raw.requesterId : null
+    const responsibleId =
+      typeof raw.responsibleId === "string"
+        ? raw.responsibleId
+        : ownerId ?? requesterId
+    const delegateId =
+      typeof raw.delegateId === "string" ? raw.delegateId : null
+    const participantIds = uniqueStringIds(raw.participantIds)
+    if (
+      delegateId &&
+      delegateId !== responsibleId &&
+      delegateId !== requesterId &&
+      !participantIds.includes(delegateId)
+    ) {
+      participantIds.push(delegateId)
+    }
+    return normalizeActivity({
+      ...raw,
+      requesterId,
+      responsibleId,
+      participantIds,
+    })
+  })
+  return {
+    version: 6,
+    people,
+    projects,
+    activities,
+    tasks: coerceTasks(v5.tasks),
+  }
+}
+
+export function migrateLegacyStore(value: unknown): StoreV5 {
   const legacy = value as {
     projects: LegacyProject[]
     activities: LegacyActivity[]
@@ -345,7 +541,7 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
   const people: Person[] = []
   const byKey = new Map<string, Person>()
 
-  const projects: Project[] = legacy.projects.map((project) => {
+  const projects = legacy.projects.map((project) => {
     const { people: peopleRaw, ...rest } = project
     const personIds =
       typeof peopleRaw === "string"
@@ -356,9 +552,9 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
     return { ...rest, personIds, categories: [] }
   })
 
-  const activities: Activity[] = legacy.activities.map((activity) => {
+  const activities = legacy.activities.map((activity) => {
     const { requester, waitingOn, ...rest } = activity
-    return normalizeActivity({
+    return {
       ...rest,
       requesterId:
         typeof requester === "string"
@@ -372,35 +568,33 @@ export function migrateLegacyStore(value: unknown): NimbusStore {
       closingNote:
         typeof rest.closingNote === "string" ? rest.closingNote : "",
       attachments: [],
-    })
+    }
   })
 
   return { version: 5, people, projects, activities, tasks: [] }
 }
 
-export function migrateV2Store(value: unknown): NimbusStore {
+export function migrateV2Store(value: unknown): StoreV5 {
   const v2 = value as {
-    people: NimbusStore["people"]
-    projects: Array<Omit<Project, "categories"> & { categories?: unknown }>
-    activities: Array<Record<string, unknown>>
+    people: unknown[]
+    projects: Array<Record<string, unknown> & { categories?: unknown }>
+    activities: unknown[]
   }
   return migrateV3Store({
     version: 3,
     people: v2.people,
     projects: v2.projects.map((project) => ({
       ...project,
-      categories: Array.isArray(project.categories)
-        ? (project.categories as Project["categories"])
-        : [],
+      categories: Array.isArray(project.categories) ? project.categories : [],
     })),
     activities: v2.activities,
   })
 }
 
-export function migrateV3Store(value: unknown): NimbusStore {
+export function migrateV3Store(value: unknown): StoreV5 {
   const v3 = value as {
-    people: Person[]
-    projects: Project[]
+    people: unknown[]
+    projects: unknown[]
     activities: Array<
       Record<string, unknown> & {
         id: string
@@ -409,8 +603,8 @@ export function migrateV3Store(value: unknown): NimbusStore {
       }
     >
   }
-  const tasks: Task[] = []
-  const activities: Activity[] = v3.activities.map((raw) => {
+  const tasks: unknown[] = []
+  const activities = v3.activities.map((raw) => {
     const dueDate = typeof raw.dueDate === "string" ? raw.dueDate : null
     const assigneeIds = Array.isArray(raw.assigneeIds)
       ? raw.assigneeIds.filter((id): id is string => typeof id === "string")
@@ -430,7 +624,7 @@ export function migrateV3Store(value: unknown): NimbusStore {
         notes: "",
       })
     }
-    return normalizeActivity(raw)
+    return raw
   })
   return {
     version: 5,
@@ -441,8 +635,8 @@ export function migrateV3Store(value: unknown): NimbusStore {
   }
 }
 
-export function migrateV4Store(value: unknown): NimbusStore {
-  const v4 = value as Omit<NimbusStore, "version"> & { version: 4 }
+export function migrateV4Store(value: unknown): StoreV5 {
+  const v4 = value as Omit<StoreV5, "version"> & { version: 4 }
   return {
     ...v4,
     version: 5,
@@ -455,17 +649,32 @@ export function coerceNimbusStore(
   if (isNimbusStore(value)) {
     return { store: ensureStoreShape(value), migrated: false }
   }
+  if (isV5NimbusStore(value)) {
+    return { store: ensureStoreShape(migrateV5ToV6(value)), migrated: true }
+  }
   if (isV4NimbusStore(value)) {
-    return { store: ensureStoreShape(migrateV4Store(value)), migrated: true }
+    return {
+      store: ensureStoreShape(migrateV5ToV6(migrateV4Store(value))),
+      migrated: true,
+    }
   }
   if (isV3NimbusStore(value)) {
-    return { store: ensureStoreShape(migrateV3Store(value)), migrated: true }
+    return {
+      store: ensureStoreShape(migrateV5ToV6(migrateV3Store(value))),
+      migrated: true,
+    }
   }
   if (isV2NimbusStore(value)) {
-    return { store: ensureStoreShape(migrateV2Store(value)), migrated: true }
+    return {
+      store: ensureStoreShape(migrateV5ToV6(migrateV2Store(value))),
+      migrated: true,
+    }
   }
   if (isLegacyNimbusStore(value)) {
-    return { store: ensureStoreShape(migrateLegacyStore(value)), migrated: true }
+    return {
+      store: ensureStoreShape(migrateV5ToV6(migrateLegacyStore(value))),
+      migrated: true,
+    }
   }
   return null
 }

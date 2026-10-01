@@ -35,7 +35,7 @@ function matchesQuery(
   const haystack = [
     project.name,
     project.client,
-    personNames(people, project.personIds),
+    personNames(people, project.participantIds),
   ]
     .join(" ")
     .toLowerCase()

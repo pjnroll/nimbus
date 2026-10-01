@@ -1,24 +1,41 @@
 import { addDaysISO, nowISO } from "@/lib/dates"
 import { dateToNoonStartsAt } from "@/lib/tasks"
-import type { Activity, NimbusStore, Person, Project, Task } from "@/lib/types"
+import type {
+  Activity,
+  NimbusStore,
+  Person,
+  PersonKind,
+  Project,
+  Task,
+} from "@/lib/types"
 
 const created = nowISO()
 
+function person(
+  id: string,
+  name: string,
+  kind: PersonKind = "persona",
+  memberIds: string[] = [],
+): Person {
+  return { id, name, kind, memberIds, archivedAt: null }
+}
+
 const people: Person[] = [
-  { id: "ppl-andrea", name: "Andrea Rossi" },
-  { id: "ppl-laura", name: "Laura Conti" },
-  { id: "ppl-netops", name: "NetOps" },
-  { id: "ppl-sara", name: "Sara Greco" },
-  { id: "ppl-team-azure", name: "team Azure" },
-  { id: "ppl-referente", name: "Referente cliente" },
-  { id: "ppl-helpdesk", name: "Helpdesk interno" },
-  { id: "ppl-iam", name: "team IAM" },
-  { id: "ppl-paolo", name: "Paolo Mancini" },
-  { id: "ppl-giulia", name: "Giulia Ferri" },
-  { id: "ppl-cloudwatch", name: "Monitoraggio CloudWatch" },
-  { id: "ppl-marco", name: "Marco Bianchi" },
-  { id: "ppl-referente-it", name: "Referente IT cliente" },
-  { id: "ppl-tu", name: "Pier Luigi Laviano" },
+  person("ppl-andrea", "Andrea Rossi"),
+  person("ppl-laura", "Laura Conti"),
+  person("ppl-netops", "NetOps", "team"),
+  person("ppl-sara", "Sara Greco"),
+  person("ppl-team-azure", "team Azure", "team"),
+  person("ppl-referente", "Referente cliente"),
+  person("ppl-helpdesk", "Helpdesk interno", "team"),
+  person("ppl-iam", "team IAM", "team"),
+  person("ppl-paolo", "Paolo Mancini"),
+  person("ppl-giulia", "Giulia Ferri"),
+  person("ppl-cloudwatch", "Monitoraggio CloudWatch", "team"),
+  person("ppl-marco", "Marco Bianchi"),
+  person("ppl-luca", "Luca Neri"),
+  person("ppl-referente-it", "Referente IT cliente"),
+  person("ppl-tu", "Pier Luigi Laviano"),
 ]
 
 const projects: Project[] = [
@@ -29,7 +46,14 @@ const projects: Project[] = [
     status: "attivo",
     color: "teal",
     driveUrl: "https://drive.google.com/drive/folders/tributi-cloud",
-    personIds: ["ppl-andrea", "ppl-laura", "ppl-netops", "ppl-marco"],
+    managerId: "ppl-tu",
+    participantIds: [
+      "ppl-andrea",
+      "ppl-laura",
+      "ppl-netops",
+      "ppl-marco",
+      "ppl-luca",
+    ],
     categories: [
       { id: "cat-tributi-app", name: "Applicativo" },
       { id: "cat-tributi-infra", name: "Infrastruttura" },
@@ -47,7 +71,13 @@ const projects: Project[] = [
     status: "attivo",
     color: "amber",
     driveUrl: "https://drive.google.com/drive/folders/migrazione-azure-comuni",
-    personIds: ["ppl-sara", "ppl-team-azure", "ppl-referente", "ppl-referente-it"],
+    managerId: "ppl-sara",
+    participantIds: [
+      "ppl-sara",
+      "ppl-team-azure",
+      "ppl-referente",
+      "ppl-referente-it",
+    ],
     categories: [
       { id: "cat-azure-app", name: "Applicativo" },
       { id: "cat-azure-infra", name: "Infrastruttura" },
@@ -65,7 +95,8 @@ const projects: Project[] = [
     status: "in_attesa",
     color: "sky",
     driveUrl: "https://drive.google.com/drive/folders/ambienti-qa",
-    personIds: ["ppl-helpdesk", "ppl-iam"],
+    managerId: "ppl-tu",
+    participantIds: ["ppl-helpdesk", "ppl-iam"],
     categories: [
       { id: "cat-qa-app", name: "Applicativo" },
       { id: "cat-qa-infra", name: "Infrastruttura" },
@@ -77,14 +108,14 @@ const projects: Project[] = [
   },
 ]
 
-type SeedActivity = Omit<Activity, "ownerId" | "delegateId" | "reminderOn"> &
-  Partial<Pick<Activity, "ownerId" | "delegateId" | "reminderOn">>
+type SeedActivity = Omit<Activity, "responsibleId" | "participantIds" | "reminderOn"> &
+  Partial<Pick<Activity, "responsibleId" | "participantIds" | "reminderOn">>
 
 function completeActivity(activity: SeedActivity): Activity {
   return {
     ...activity,
-    ownerId: activity.ownerId ?? "ppl-tu",
-    delegateId: activity.delegateId ?? null,
+    responsibleId: activity.responsibleId ?? "ppl-tu",
+    participantIds: activity.participantIds ?? [],
     reminderOn: activity.reminderOn ?? null,
   }
 }
@@ -98,10 +129,9 @@ const activities: SeedActivity[] = [
     projectId: null,
     source: "altro",
     requesterId: "ppl-paolo",
-    ownerId: "ppl-tu",
-    delegateId: "ppl-sara",
+    responsibleId: "ppl-tu",
+    participantIds: ["ppl-sara"],
     reminderOn: addDaysISO(10),
-    type: "eseguo",
     status: "in_attesa",
     priority: "alta",
     waitingOnPersonId: null,
@@ -121,7 +151,7 @@ const activities: SeedActivity[] = [
     projectId: "prj-qa",
     source: "altro",
     requesterId: "ppl-giulia",
-    type: "eseguo",
+    responsibleId: "ppl-tu",
     status: "in_attesa",
     priority: "media",
     waitingOnPersonId: null,
@@ -141,7 +171,7 @@ const activities: SeedActivity[] = [
     projectId: "prj-tributi",
     source: "altro",
     requesterId: "ppl-cloudwatch",
-    type: "eseguo",
+    responsibleId: "ppl-tu",
     status: "in_corso",
     priority: "alta",
     waitingOnPersonId: null,
@@ -157,15 +187,16 @@ const activities: SeedActivity[] = [
     id: "act-today-peering",
     title: "Allineamento team rete sul peering VPC di QA",
     description:
-      "Serve conferma CIDR e route table prima di aprire il ticket AWS. Tu coordini, non esegui il change.",
+      "NetOps è responsabile del risultato. Mario e Luca eseguono il change; Pier resta coinvolto per il coordinamento con il cliente.",
     projectId: "prj-tributi",
     source: "chat",
     requesterId: "ppl-laura",
-    type: "coordino",
+    responsibleId: "ppl-netops",
+    participantIds: ["ppl-tu"],
     status: "in_corso",
     priority: "alta",
-    waitingOnPersonId: "ppl-netops",
-    waitingReason: "Manca il CIDR definitivo del VPC QA",
+    waitingOnPersonId: null,
+    waitingReason: "",
     closingNote: "",
     attachments: [],
     driveUrl: "",
@@ -177,11 +208,12 @@ const activities: SeedActivity[] = [
     id: "act-rds",
     title: "Stima effort migrazione RDS PostgreSQL 16",
     description:
-      "Preparare una stima per il steering committee: downtime, replica, rollback. Documento da lasciare in Drive.",
+      "Pier è responsabile. Marco esegue la stima e resta coinvolto nel confronto con il cliente.",
     projectId: "prj-azure-comuni",
     source: "email",
-    requesterId: "ppl-sara",
-    type: "eseguo",
+    requesterId: "ppl-referente",
+    responsibleId: "ppl-tu",
+    participantIds: ["ppl-marco"],
     status: "in_corso",
     priority: "media",
     waitingOnPersonId: null,
@@ -201,7 +233,7 @@ const activities: SeedActivity[] = [
     projectId: "prj-tributi",
     source: "email",
     requesterId: "ppl-andrea",
-    type: "coordino",
+    responsibleId: "ppl-tu",
     status: "in_attesa",
     priority: "alta",
     waitingOnPersonId: "ppl-marco",
@@ -221,7 +253,7 @@ const activities: SeedActivity[] = [
     projectId: "prj-azure-comuni",
     source: "email",
     requesterId: "ppl-referente",
-    type: "coordino",
+    responsibleId: "ppl-sara",
     status: "in_attesa",
     priority: "media",
     waitingOnPersonId: "ppl-referente-it",
@@ -241,7 +273,7 @@ const activities: SeedActivity[] = [
     projectId: "prj-azure-comuni",
     source: "altro",
     requesterId: "ppl-tu",
-    type: "eseguo",
+    responsibleId: "ppl-tu",
     status: "in_corso",
     priority: "bassa",
     waitingOnPersonId: null,
@@ -260,7 +292,7 @@ const activities: SeedActivity[] = [
     projectId: "prj-tributi",
     source: "altro",
     requesterId: "ppl-tu",
-    type: "eseguo",
+    responsibleId: "ppl-tu",
     status: "fatto",
     priority: "media",
     waitingOnPersonId: null,
@@ -280,7 +312,7 @@ const tasks: Task[] = [
     activityId: "act-overdue-tls",
     startsAt: dateToNoonStartsAt(addDaysISO(-2)),
     endsAt: null,
-    personIds: [],
+    executorIds: ["ppl-tu"],
     notes: "",
   },
   {
@@ -288,7 +320,7 @@ const tasks: Task[] = [
     activityId: "act-today-peering",
     startsAt: `${addDaysISO(0)}T15:00`,
     endsAt: `${addDaysISO(0)}T16:00`,
-    personIds: ["ppl-netops"],
+    executorIds: ["ppl-marco", "ppl-luca"],
     notes: "Allineamento su CIDR e route table",
   },
   {
@@ -296,7 +328,7 @@ const tasks: Task[] = [
     activityId: "act-rds",
     startsAt: dateToNoonStartsAt(addDaysISO(2)),
     endsAt: null,
-    personIds: [],
+    executorIds: ["ppl-marco"],
     notes: "",
   },
   {
@@ -304,7 +336,7 @@ const tasks: Task[] = [
     activityId: "act-wait-firewall",
     startsAt: dateToNoonStartsAt(addDaysISO(-1)),
     endsAt: null,
-    personIds: ["ppl-marco"],
+    executorIds: ["ppl-marco"],
     notes: "",
   },
   {
@@ -312,7 +344,7 @@ const tasks: Task[] = [
     activityId: "act-wait-ad",
     startsAt: dateToNoonStartsAt(addDaysISO(1)),
     endsAt: null,
-    personIds: ["ppl-referente-it"],
+    executorIds: ["ppl-referente-it"],
     notes: "",
   },
   {
@@ -320,7 +352,7 @@ const tasks: Task[] = [
     activityId: "act-kickoff",
     startsAt: dateToNoonStartsAt(addDaysISO(1)),
     endsAt: null,
-    personIds: [],
+    executorIds: ["ppl-tu"],
     notes: "",
   },
   {
@@ -328,7 +360,7 @@ const tasks: Task[] = [
     activityId: "act-done-eip",
     startsAt: `${addDaysISO(-5)}T09:30`,
     endsAt: `${addDaysISO(-5)}T10:00`,
-    personIds: [],
+    executorIds: ["ppl-tu"],
     notes: "",
   },
 ]
@@ -344,9 +376,10 @@ type Execution = {
   daysAgo: number
   start: string
   end: string | null
-  personIds?: string[]
+  executorIds?: string[]
   slotNote?: string
   requesterId?: string | null
+  responsibleId?: string | null
 }
 
 const executions: Execution[] = [
@@ -361,7 +394,7 @@ const executions: Execution[] = [
     daysAgo: 38,
     start: "09:00",
     end: "10:30",
-    personIds: ["ppl-andrea"],
+    executorIds: ["ppl-andrea"],
   },
   {
     id: "bastion",
@@ -375,7 +408,7 @@ const executions: Execution[] = [
     daysAgo: 30,
     start: "18:00",
     end: "19:00",
-    personIds: ["ppl-netops"],
+    executorIds: ["ppl-netops"],
     slotNote: "Finestra serale concordata",
   },
   {
@@ -389,7 +422,7 @@ const executions: Execution[] = [
     daysAgo: 23,
     start: "18:00",
     end: "18:45",
-    personIds: ["ppl-netops"],
+    executorIds: ["ppl-netops"],
   },
   {
     id: "restore",
@@ -402,7 +435,7 @@ const executions: Execution[] = [
     daysAgo: 16,
     start: "14:00",
     end: "16:00",
-    personIds: ["ppl-laura"],
+    executorIds: ["ppl-laura"],
   },
   {
     id: "ami",
@@ -416,7 +449,7 @@ const executions: Execution[] = [
     daysAgo: 9,
     start: "21:00",
     end: "22:30",
-    personIds: ["ppl-andrea", "ppl-marco"],
+    executorIds: ["ppl-andrea", "ppl-marco"],
   },
   {
     id: "ente-a",
@@ -429,7 +462,7 @@ const executions: Execution[] = [
     daysAgo: 35,
     start: "10:00",
     end: "11:00",
-    personIds: ["ppl-team-azure", "ppl-referente-it"],
+    executorIds: ["ppl-team-azure", "ppl-referente-it"],
   },
   {
     id: "ente-b",
@@ -443,7 +476,7 @@ const executions: Execution[] = [
     daysAgo: 26,
     start: "15:00",
     end: "16:00",
-    personIds: ["ppl-team-azure"],
+    executorIds: ["ppl-team-azure"],
   },
   {
     id: "ente-b-retry",
@@ -456,7 +489,7 @@ const executions: Execution[] = [
     daysAgo: 19,
     start: "15:00",
     end: "16:30",
-    personIds: ["ppl-team-azure", "ppl-referente-it"],
+    executorIds: ["ppl-team-azure", "ppl-referente-it"],
   },
   {
     id: "adconnect",
@@ -469,7 +502,7 @@ const executions: Execution[] = [
     daysAgo: 12,
     start: "09:30",
     end: "11:00",
-    personIds: ["ppl-sara"],
+    executorIds: ["ppl-sara"],
   },
   {
     id: "ente-c",
@@ -483,7 +516,7 @@ const executions: Execution[] = [
     daysAgo: 4,
     start: "10:00",
     end: "12:00",
-    personIds: ["ppl-team-azure"],
+    executorIds: ["ppl-team-azure"],
     slotNote: "Serve la VPN site-to-site attiva",
   },
   {
@@ -497,7 +530,7 @@ const executions: Execution[] = [
     daysAgo: 21,
     start: "11:00",
     end: "11:30",
-    personIds: ["ppl-iam"],
+    executorIds: ["ppl-iam"],
     requesterId: "ppl-helpdesk",
   },
   {
@@ -511,7 +544,7 @@ const executions: Execution[] = [
     daysAgo: 7,
     start: "14:30",
     end: "17:00",
-    personIds: ["ppl-giulia"],
+    executorIds: ["ppl-giulia"],
     requesterId: "ppl-giulia",
   },
 ]
@@ -525,7 +558,7 @@ for (const execution of executions) {
     projectId: execution.projectId,
     source: "altro",
     requesterId: execution.requesterId ?? "ppl-tu",
-    type: "eseguo",
+    responsibleId: execution.responsibleId ?? "ppl-tu",
     status: execution.outcome,
     priority: "media",
     waitingOnPersonId: null,
@@ -542,13 +575,13 @@ for (const execution of executions) {
     activityId: `act-log-${execution.id}`,
     startsAt: `${day}T${execution.start}`,
     endsAt: execution.end ? `${day}T${execution.end}` : null,
-    personIds: execution.personIds ?? [],
+    executorIds: execution.executorIds ?? [],
     notes: execution.slotNote ?? "",
   })
 }
 
 export const EMPTY_STORE: NimbusStore = {
-  version: 5,
+  version: 6,
   people: [],
   projects: [],
   activities: [],
@@ -556,7 +589,7 @@ export const EMPTY_STORE: NimbusStore = {
 }
 
 export const DEMO_STORE: NimbusStore = {
-  version: 5,
+  version: 6,
   people,
   projects,
   activities: activities.map(completeActivity),

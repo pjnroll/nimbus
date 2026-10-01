@@ -72,7 +72,7 @@ export function upsertTaskInStore(
     activityId: input.activityId,
     startsAt: input.startsAt,
     endsAt: input.endsAt,
-    personIds: [...input.personIds],
+    executorIds: [...input.executorIds],
     notes: input.notes,
   }
   const without = store.tasks.filter(

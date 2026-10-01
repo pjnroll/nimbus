@@ -1,8 +1,8 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { PRIORITY_LABELS, STATUS_LABELS, TYPE_LABELS } from "@/lib/labels"
-import type { ActivityStatus, ActivityType, Priority } from "@/lib/types"
+import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/labels"
+import type { ActivityStatus, Priority } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export function StatusBadge({ status }: { status: ActivityStatus }) {
@@ -21,18 +21,6 @@ export function StatusBadge({ status }: { status: ActivityStatus }) {
   return (
     <Badge variant="outline" className={cn("font-medium", styles[status])}>
       {STATUS_LABELS[status]}
-    </Badge>
-  )
-}
-
-export function TypeBadge({ type }: { type: ActivityType }) {
-  const styles: Record<ActivityType, string> = {
-    eseguo: "border-badge-info/40 bg-badge-info text-badge-info-fg",
-    coordino: "border-badge-warn/40 bg-badge-warn text-badge-warn-fg",
-  }
-  return (
-    <Badge variant="outline" className={cn("font-medium", styles[type])}>
-      {TYPE_LABELS[type]}
     </Badge>
   )
 }

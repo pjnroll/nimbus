@@ -1,7 +1,7 @@
 import type {
   ActivitySource,
   ActivityStatus,
-  ActivityType,
+  PersonKind,
   Priority,
   ProjectStatus,
 } from "@/lib/types"
@@ -14,9 +14,9 @@ export const STATUS_LABELS: Record<ActivityStatus, string> = {
   fallita: "Fallita",
 }
 
-export const TYPE_LABELS: Record<ActivityType, string> = {
-  eseguo: "Eseguo io",
-  coordino: "Coordino",
+export const PERSON_KIND_LABELS: Record<PersonKind, string> = {
+  persona: "Persona",
+  team: "Team",
 }
 
 export const SOURCE_LABELS: Record<ActivitySource, string> = {

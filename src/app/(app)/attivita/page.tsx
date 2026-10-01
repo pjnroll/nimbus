@@ -9,7 +9,7 @@ import { AppSelect } from "@/components/app-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels"
+import { STATUS_LABELS } from "@/lib/labels"
 import { sortByTaskThenPriority } from "@/lib/selectors"
 import { activityCategoryName } from "@/lib/categories"
 import { activityPersonHaystack } from "@/lib/people"
@@ -49,7 +49,6 @@ export default function AttivitaPage() {
   const { store, updateActivity, deleteActivity } = useNimbus()
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState(ALL)
-  const [type, setType] = useState(ALL)
   const [projectId, setProjectId] = useState(ALL)
   const [categoryId, setCategoryId] = useState(ALL)
   const [selected, setSelected] = useState<Activity | null>(null)
@@ -61,7 +60,6 @@ export default function AttivitaPage() {
     const list = store.activities.filter((activity) => {
       if (activity.status === "inbox") return false
       if (status !== ALL && activity.status !== status) return false
-      if (type !== ALL && activity.type !== type) return false
       if (projectId === NONE_PROJECT && activity.projectId) return false
       if (
         projectId !== ALL &&
@@ -105,7 +103,6 @@ export default function AttivitaPage() {
     store.tasks,
     query,
     status,
-    type,
     projectId,
     categoryId,
   ])
@@ -153,7 +150,7 @@ export default function AttivitaPage() {
 
       <div
         className={`surface-panel grid gap-2 p-3 sm:grid-cols-2 ${
-          selectedProject ? "lg:grid-cols-5" : "lg:grid-cols-4"
+          selectedProject ? "lg:grid-cols-4" : "lg:grid-cols-3"
         }`}
       >
         <Input
@@ -169,17 +166,6 @@ export default function AttivitaPage() {
             ...FILTER_STATUSES.map((value) => ({
               value,
               label: STATUS_LABELS[value],
-            })),
-          ]}
-        />
-        <AppSelect
-          value={type}
-          onChange={setType}
-          options={[
-            { value: ALL, label: "Eseguo e coordino" },
-            ...Object.entries(TYPE_LABELS).map(([value, label]) => ({
-              value,
-              label,
             })),
           ]}
         />
@@ -230,7 +216,7 @@ export default function AttivitaPage() {
             onStatus={onStatus}
             onDelete={onDelete}
             emptyTitle="Nessuna attività con questi filtri"
-            emptyDescription="Svuota la ricerca o cambia stato, tipo e progetto."
+            emptyDescription="Svuota la ricerca o cambia stato e progetto."
           />
         </TabsContent>
         <TabsContent value="bacheca" className="mt-4">

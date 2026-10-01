@@ -12,6 +12,7 @@ import {
   MenuIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
+  UsersIcon,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { DataMenu } from "@/components/data-menu"
@@ -32,6 +33,7 @@ import { cn } from "@/lib/utils"
 const NAV = [
   { href: "/", label: "Agenda", icon: CalendarDaysIcon },
   { href: "/attivita", label: "Attività", icon: ListTodoIcon },
+  { href: "/persone", label: "Persone e Team", icon: UsersIcon },
 ]
 
 const SIDEBAR_STORAGE_KEY = "nimbus-sidebar"

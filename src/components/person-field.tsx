@@ -11,9 +11,23 @@ import {
 import { createPortal } from "react-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { PERSON_KIND_LABELS } from "@/lib/labels"
 import { cleanPersonName, findPersonByName, personNameKey } from "@/lib/people"
 import type { Person } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+function PersonLabel({ person }: { person: Person }) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <span className="truncate">{person.name}</span>
+      {person.kind === "team" ? (
+        <span className="shrink-0 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+          {PERSON_KIND_LABELS.team}
+        </span>
+      ) : null}
+    </span>
+  )
+}
 
 export function PersonField({
   people,
@@ -60,6 +74,7 @@ export function PersonField({
     return people
       .filter((person) => {
         if (selectedIds.has(person.id)) return false
+        if (person.archivedAt) return false
         if (!needle) return true
         return personNameKey(person.name).includes(needle)
       })
@@ -77,7 +92,9 @@ export function PersonField({
       suggestIds
         .filter((personId) => !selectedIds.has(personId))
         .map((personId) => people.find((person) => person.id === personId))
-        .filter((person): person is Person => Boolean(person))
+        .filter((person): person is Person =>
+          person != null && !person.archivedAt,
+        )
         .sort((a, b) => a.name.localeCompare(b.name, "it")),
     [people, selectedIds, suggestIds],
   )
@@ -151,7 +168,7 @@ export function PersonField({
         addPerson(matches[0])
         return
       }
-      const exact = findPersonByName(matches, query)
+      const exact = findPersonByName(people, query)
       if (exact) {
         addPerson(exact)
         return
@@ -182,7 +199,7 @@ export function PersonField({
               variant="secondary"
               className="h-6 gap-0.5 pr-0.5"
             >
-              {person.name}
+              <PersonLabel person={person} />
               <button
                 type="button"
                 className="rounded-full p-1.5 hover:bg-foreground/10"
@@ -232,7 +249,7 @@ export function PersonField({
                       className="flex min-h-10 w-full rounded-md px-2 py-2 text-left hover:bg-muted md:min-h-0 md:py-1.5"
                       onClick={() => addPerson(person)}
                     >
-                      {person.name}
+                      <PersonLabel person={person} />
                     </button>
                   </li>
                 ))}
@@ -265,7 +282,7 @@ export function PersonField({
               size="sm"
               onClick={() => addPerson(person)}
             >
-              {person.name}
+              <PersonLabel person={person} />
             </Button>
           ))}
         </div>

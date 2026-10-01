@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { personNames } from "@/lib/people"
+import { personName, personNames } from "@/lib/people"
 import { projectBorderClass } from "@/lib/project-color"
 import { useNimbus } from "@/lib/store"
 import type { Project } from "@/lib/types"
@@ -27,7 +27,8 @@ export function ProjectRow({
 }) {
   const { store, readOnly } = useNimbus()
   const driveUrl = safeHttpUrl(project.driveUrl)
-  const peopleLabel = personNames(store.people, project.personIds)
+  const peopleLabel = personNames(store.people, project.participantIds)
+  const managerName = personName(store.people, project.managerId)
 
   return (
     <article
@@ -47,9 +48,11 @@ export function ProjectRow({
       <p className="shrink-0 text-sm tabular-nums text-muted-foreground">
         {openCount === 1 ? "1 aperta" : `${openCount} aperte`}
       </p>
-      {peopleLabel ? (
+      {managerName || peopleLabel ? (
         <p className="hidden min-w-0 max-w-56 truncate text-sm text-muted-foreground lg:block">
-          {peopleLabel}
+          {managerName
+            ? `PM · ${managerName}${peopleLabel ? ` · ${peopleLabel}` : ""}`
+            : peopleLabel}
         </p>
       ) : null}
       <DropdownMenu>

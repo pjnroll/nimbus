@@ -34,7 +34,8 @@ type FormState = {
   status: ProjectStatus
   color: ProjectColorId
   driveUrl: string
-  personIds: string[]
+  managerId: string | null
+  participantIds: string[]
   categories: Category[]
   notes: string
 }
@@ -46,7 +47,8 @@ function emptyForm(): FormState {
     status: "attivo",
     color: "teal",
     driveUrl: "",
-    personIds: [],
+    managerId: null,
+    participantIds: [],
     categories: [],
     notes: "",
   }
@@ -59,7 +61,8 @@ function fromProject(project: Project): FormState {
     status: project.status,
     color: project.color,
     driveUrl: project.driveUrl,
-    personIds: project.personIds,
+    managerId: project.managerId,
+    participantIds: project.participantIds,
     categories: project.categories ?? [],
     notes: project.notes,
   }
@@ -129,7 +132,11 @@ function ProjectDialogForm({
       status: form.status,
       color: form.color,
       driveUrl: form.driveUrl.trim(),
-      personIds: form.personIds,
+      managerId: form.managerId,
+      participantIds:
+        form.managerId && !form.participantIds.includes(form.managerId)
+          ? [...form.participantIds, form.managerId]
+          : form.participantIds,
       categories: form.categories,
       notes: form.notes.trim(),
     }
@@ -238,12 +245,27 @@ function ProjectDialogForm({
           </FormField>
         </FormSection>
         <FormSection title="Squadra">
-          <FormField label="Persone coinvolte" htmlFor="prj-people">
+          <FormField label="Project Manager" htmlFor="prj-manager">
+            <PersonField
+              id="prj-manager"
+              people={store.people}
+              value={form.managerId ? [form.managerId] : []}
+              onChange={(ids) =>
+                setForm({ ...form, managerId: ids[0] ?? null })
+              }
+              onCreate={upsertPerson}
+              multiple={false}
+              placeholder="Responsabile del progetto"
+            />
+          </FormField>
+          <FormField label="Persone e Team coinvolti" htmlFor="prj-people">
             <PersonField
               id="prj-people"
               people={store.people}
-              value={form.personIds}
-              onChange={(personIds) => setForm({ ...form, personIds })}
+              value={form.participantIds}
+              onChange={(participantIds) =>
+                setForm({ ...form, participantIds })
+              }
               onCreate={upsertPerson}
               placeholder="Nome, poi Invio per aggiungere"
             />

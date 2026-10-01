@@ -7,15 +7,18 @@ export type ActivityStatus =
   | "in_attesa"
   | "fatto"
   | "fallita"
-export type ActivityType = "eseguo" | "coordino"
 export type ActivitySource = "email" | "chat" | "altro"
 export type Priority = "alta" | "media" | "bassa"
+export type PersonKind = "persona" | "team"
 
 export type { ProjectColorId }
 
 export type Person = {
   id: string
   name: string
+  kind: PersonKind
+  memberIds: string[]
+  archivedAt: string | null
 }
 
 export type Category = {
@@ -30,7 +33,8 @@ export type Project = {
   status: ProjectStatus
   color: ProjectColorId
   driveUrl: string
-  personIds: string[]
+  managerId: string | null
+  participantIds: string[]
   categories: Category[]
   notes: string
   createdAt: string
@@ -50,7 +54,7 @@ export type Task = {
   activityId: string
   startsAt: string
   endsAt: string | null
-  personIds: string[]
+  executorIds: string[]
   notes: string
 }
 
@@ -61,10 +65,9 @@ export type Activity = {
   projectId: string | null
   source: ActivitySource
   requesterId: string | null
-  ownerId: string | null
-  delegateId: string | null
+  responsibleId: string | null
+  participantIds: string[]
   reminderOn: string | null
-  type: ActivityType
   status: ActivityStatus
   priority: Priority
   waitingOnPersonId: string | null
@@ -78,7 +81,7 @@ export type Activity = {
 }
 
 export type NimbusStore = {
-  version: 5
+  version: 6
   people: Person[]
   projects: Project[]
   activities: Activity[]
@@ -89,11 +92,14 @@ export const STORE_KEY = "nimbus.laviano.v1"
 export const NONE_PROJECT = "__none__"
 export const NONE_CATEGORY = "__none__"
 
-export function isNimbusStore(value: unknown): value is NimbusStore {
-  if (!value || typeof value !== "object") return false
-  const candidate = value as Partial<NimbusStore>
+function hasStoreCollections(value: object): boolean {
+  const candidate = value as {
+    people?: unknown
+    projects?: unknown
+    activities?: unknown
+    tasks?: unknown
+  }
   return (
-    candidate.version === 5 &&
     Array.isArray(candidate.people) &&
     Array.isArray(candidate.projects) &&
     Array.isArray(candidate.activities) &&
@@ -101,22 +107,22 @@ export function isNimbusStore(value: unknown): value is NimbusStore {
   )
 }
 
+export function isNimbusStore(value: unknown): value is NimbusStore {
+  if (!value || typeof value !== "object") return false
+  const candidate = value as Partial<NimbusStore>
+  return candidate.version === 6 && hasStoreCollections(candidate)
+}
+
+export function isV5NimbusStore(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false
+  const candidate = value as { version?: unknown }
+  return candidate.version === 5 && hasStoreCollections(candidate)
+}
+
 export function isV4NimbusStore(value: unknown): boolean {
   if (!value || typeof value !== "object") return false
-  const candidate = value as {
-    version?: unknown
-    people?: unknown
-    projects?: unknown
-    activities?: unknown
-    tasks?: unknown
-  }
-  return (
-    candidate.version === 4 &&
-    Array.isArray(candidate.people) &&
-    Array.isArray(candidate.projects) &&
-    Array.isArray(candidate.activities) &&
-    Array.isArray(candidate.tasks)
-  )
+  const candidate = value as { version?: unknown }
+  return candidate.version === 4 && hasStoreCollections(candidate)
 }
 
 export function isV3NimbusStore(value: unknown): boolean {
