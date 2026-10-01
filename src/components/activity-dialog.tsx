@@ -129,8 +129,11 @@ function fromActivity(
   }
 }
 
+const SHOW_DRIVE_AND_ATTACHMENTS = false
+const SHOW_CATEGORY = false
+
 const heroInputClass =
-  "h-11 border-input/80 px-3 font-heading text-xl md:text-xl"
+  "min-h-14 field-sizing-content resize-none border-input/80 px-3 py-2.5 font-heading text-xl leading-snug md:text-xl"
 
 export function ActivityDialog({
   open,
@@ -380,19 +383,19 @@ function ActivityDialogForm({
         <DialogTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {heading ?? (activity ? "Modifica attività" : "Nuova attività")}
         </DialogTitle>
-        <Input
+        <Textarea
           id="act-title"
           value={form.title}
           onChange={(event) => patch("title", event.target.value)}
           placeholder="Titolo dell'attività"
           className={heroInputClass}
           aria-label="Titolo"
+          rows={2}
         />
       </DialogHeader>
       <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1">
         <div className="grid content-start gap-4 md:grid-cols-2 md:gap-6">
-        <div className="grid content-start gap-4">
-          <FormSection title="Responsabilità">
+          <FormSection title="Persone">
             <FormField label="Responsabile" htmlFor="act-responsible">
               <PersonField
                 id="act-responsible"
@@ -426,70 +429,7 @@ function ActivityDialogForm({
                 placeholder="Persone o team da tenere in copia"
               />
             </FormField>
-            <FormField label="In attesa di" htmlFor="act-waiting">
-              <PersonField
-                id="act-waiting"
-                people={store.people}
-                value={form.waitingOnPersonId ? [form.waitingOnPersonId] : []}
-                onChange={(ids) => patch("waitingOnPersonId", ids[0] ?? null)}
-                onCreate={upsertPerson}
-                multiple={false}
-                placeholder="Chi ci sta bloccando, se serve"
-              />
-            </FormField>
-            {form.waitingOnPersonId ? (
-              <FormField label="Motivo dell’attesa" htmlFor="act-waiting-reason">
-                <Input
-                  id="act-waiting-reason"
-                  value={form.waitingReason}
-                  onChange={(event) =>
-                    patch("waitingReason", event.target.value)
-                  }
-                  placeholder="Es. Attendiamo certificato VPN"
-                />
-              </FormField>
-            ) : null}
           </FormSection>
-          <FormSection title="Contesto">
-            <FormField label="Note" htmlFor="act-desc">
-              <Textarea
-                id="act-desc"
-                value={form.description}
-                onChange={(event) => patch("description", event.target.value)}
-                placeholder="Dettagli o contesto"
-              />
-            </FormField>
-            <FormField label="Link Drive" htmlFor="act-drive">
-              <Input
-                id="act-drive"
-                value={form.driveUrl}
-                onChange={(event) => patch("driveUrl", event.target.value)}
-                placeholder="https://drive.google.com/..."
-              />
-            </FormField>
-            <FormField label="Allegati" htmlFor="act-files">
-              <ActivityAttachmentsField
-                activityId={activity?.id}
-                attachments={savedAttachments}
-                pendingFiles={pendingFiles}
-                onPendingFiles={setPendingFiles}
-                onUpload={
-                  activity
-                    ? (files) => uploadActivityFiles(activity.id, files)
-                    : undefined
-                }
-                onRemove={
-                  activity
-                    ? (attachmentId) =>
-                        removeActivityAttachment(activity.id, attachmentId)
-                    : undefined
-                }
-                disabled={busy || readOnly}
-              />
-            </FormField>
-          </FormSection>
-        </div>
-        <div className="grid content-start gap-4">
           <FormSection title="Piano">
             <FormField label="Progetto" htmlFor="act-project">
               <div className="grid gap-1.5">
@@ -525,20 +465,21 @@ function ActivityDialogForm({
                 {form.projectId !== NONE_PROJECT ? (
                   <Button
                     type="button"
-                    variant="default"
-                    className="w-full justify-center"
+                    variant="link"
+                    size="sm"
+                    className="h-auto justify-start px-0"
                     onClick={() => {
                       onOpenChange(false)
                       router.push(`/progetti/${form.projectId}`)
                     }}
                   >
                     Vai al progetto
-                    <ExternalLinkIcon className="size-4" />
+                    <ExternalLinkIcon className="size-3.5" />
                   </Button>
                 ) : null}
               </div>
             </FormField>
-            {form.projectId !== NONE_PROJECT ? (
+            {SHOW_CATEGORY && form.projectId !== NONE_PROJECT ? (
               <FormField label="Categoria" htmlFor="act-category">
                 <CategoryField
                   id="act-category"
@@ -618,8 +559,48 @@ function ActivityDialogForm({
             </FormField>
           </FormSection>
         </div>
-        </div>
-          <FormSection title="Pianificazione">
+        <FormSection title="Note">
+          <Textarea
+            id="act-desc"
+            value={form.description}
+            onChange={(event) => patch("description", event.target.value)}
+            placeholder="Dettagli, contesto o chi sta bloccando"
+            aria-label="Note"
+          />
+          {SHOW_DRIVE_AND_ATTACHMENTS ? (
+            <>
+              <FormField label="Link Drive" htmlFor="act-drive">
+                <Input
+                  id="act-drive"
+                  value={form.driveUrl}
+                  onChange={(event) => patch("driveUrl", event.target.value)}
+                  placeholder="https://drive.google.com/..."
+                />
+              </FormField>
+              <FormField label="Allegati" htmlFor="act-files">
+                <ActivityAttachmentsField
+                  activityId={activity?.id}
+                  attachments={savedAttachments}
+                  pendingFiles={pendingFiles}
+                  onPendingFiles={setPendingFiles}
+                  onUpload={
+                    activity
+                      ? (files) => uploadActivityFiles(activity.id, files)
+                      : undefined
+                  }
+                  onRemove={
+                    activity
+                      ? (attachmentId) =>
+                          removeActivityAttachment(activity.id, attachmentId)
+                      : undefined
+                  }
+                  disabled={busy || readOnly}
+                />
+              </FormField>
+            </>
+          ) : null}
+        </FormSection>
+        <FormSection title="Pianificazione">
             {!form.taskPlanned ? (
               <Button
                 type="button"
