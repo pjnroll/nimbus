@@ -27,7 +27,7 @@ import {
 } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
 import { buildGoogleCalendarEventUrl } from "@/lib/google-calendar"
-import { personNames } from "@/lib/people"
+import { personName, personNames } from "@/lib/people"
 import { safeHttpUrl } from "@/lib/urls"
 import {
   buildStartsAt,
@@ -221,6 +221,10 @@ function ActivityDialogForm({
       setError("Serve un titolo, anche breve.")
       return
     }
+    if (!form.requesterId) {
+      setError("Serve il referente dell'attività.")
+      return
+    }
     if (form.driveUrl.trim() && !safeHttpUrl(form.driveUrl)) {
       setError("Il link Drive deve iniziare con http:// o https://")
       return
@@ -298,7 +302,8 @@ function ActivityDialogForm({
     const eventTitle = project?.name
       ? `${project.name} · ${titleBase}`
       : titleBase
-    const withWho = personNames(store.people, form.taskPersonIds)
+    const executors = personNames(store.people, form.taskPersonIds)
+    const referente = personName(store.people, form.requesterId)
     const detailsLines: string[] = []
     if (form.description.trim()) {
       detailsLines.push(form.description.trim())
@@ -306,8 +311,11 @@ function ActivityDialogForm({
     if (form.taskNotes.trim()) {
       detailsLines.push(`Nota slot: ${form.taskNotes.trim()}`)
     }
-    if (withWho) {
-      detailsLines.push(`Con chi: ${withWho}`)
+    if (referente) {
+      detailsLines.push(`Referente: ${referente}`)
+    }
+    if (executors) {
+      detailsLines.push(`Esecutore/i: ${executors}`)
     }
     if (form.driveUrl.trim()) {
       detailsLines.push(`Drive: ${form.driveUrl.trim()}`)
@@ -349,7 +357,7 @@ function ActivityDialogForm({
               placeholder="Dettagli o contesto"
             />
           </FormField>
-          <FormField label="Richiedente" htmlFor="act-req">
+          <FormField label="Referente" htmlFor="act-req">
             <PersonField
               id="act-req"
               people={store.people}
@@ -357,7 +365,7 @@ function ActivityDialogForm({
               onChange={(ids) => patch("requesterId", ids[0] ?? null)}
               onCreate={upsertPerson}
               multiple={false}
-              placeholder="Nome del richiedente"
+              placeholder="Nome del referente"
             />
           </FormField>
           <FormField label="Link Drive" htmlFor="act-drive">
@@ -537,7 +545,7 @@ function ActivityDialogForm({
                     />
                   </FormField>
                 </div>
-                <FormField label="Con chi" htmlFor="task-people">
+                <FormField label="Esecutore/i" htmlFor="task-people">
                   <PersonField
                     id="task-people"
                     people={store.people}
@@ -545,7 +553,7 @@ function ActivityDialogForm({
                     onChange={(ids) => patch("taskPersonIds", ids)}
                     onCreate={upsertPerson}
                     suggestIds={projectPeople}
-                    placeholder="Chi partecipa allo slot"
+                    placeholder="Chi esegue il task"
                   />
                 </FormField>
                 <FormField label="Nota dello slot" htmlFor="task-notes">

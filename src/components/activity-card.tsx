@@ -128,7 +128,7 @@ export function ActivityCard({
             >
               {overdue ? "In ritardo · " : ""}
               {formatTaskSlotIT(task)}
-              {!dense && taskPeople ? ` · ${taskPeople}` : ""}
+              {!dense && taskPeople ? ` · Esecutore/i: ${taskPeople}` : ""}
             </p>
           ) : null}
         </button>
@@ -221,7 +221,7 @@ export function ActivityCard({
               >
                 {overdue ? "In ritardo · " : ""}
                 {formatTaskSlotIT(task)}
-                {taskPeople ? ` · ${taskPeople}` : ""}
+                {taskPeople ? ` · Esecutore/i: ${taskPeople}` : ""}
               </p>
             ) : null}
             <p className="line-clamp-3 text-sm text-muted-foreground">
@@ -237,8 +237,8 @@ export function ActivityCard({
               <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 {requesterName ? (
                   <div>
-                    <dt className="sr-only">Richiedente</dt>
-                    <dd>{requesterName}</dd>
+                    <dt className="inline">Referente</dt>
+                    <dd className="inline"> · {requesterName}</dd>
                   </div>
                 ) : null}
                 {!project ? (
