@@ -56,16 +56,38 @@ export function activitiesWithTaskInRange(
       if (!activity || activity.status === "inbox") return false
       return isTaskInRange(task, from, to)
     }),
+    activities,
   )
     .map((task) => byId.get(task.activityId))
     .filter((activity): activity is Activity => Boolean(activity))
 }
 
-export function sortTasksByStartsAt(tasks: Task[]): Task[] {
+export function sortTasksByStartsAt(
+  tasks: Task[],
+  activities: Activity[] = [],
+): Task[] {
+  const titles = new Map(activities.map((activity) => [activity.id, activity.title]))
   return [...tasks].sort((a, b) => {
     const byStart = a.startsAt.localeCompare(b.startsAt)
     if (byStart !== 0) return byStart
-    return a.activityId.localeCompare(b.activityId)
+    const titleA = titles.get(a.activityId) ?? a.activityId
+    const titleB = titles.get(b.activityId) ?? b.activityId
+    return titleA.localeCompare(titleB, "it")
+  })
+}
+
+export function sortActivitiesByTaskStartsAt(
+  activities: Activity[],
+  tasks: Task[],
+): Activity[] {
+  return [...activities].sort((a, b) => {
+    const taskA = taskByActivityId(tasks, a.id)
+    const taskB = taskByActivityId(tasks, b.id)
+    const startA = taskA?.startsAt ?? ""
+    const startB = taskB?.startsAt ?? ""
+    const byStart = startA.localeCompare(startB)
+    if (byStart !== 0) return byStart
+    return a.title.localeCompare(b.title, "it")
   })
 }
 
@@ -76,7 +98,7 @@ export function tasksByDay(
 ): Map<string, Task[]> {
   const byId = new Map(activities.map((activity) => [activity.id, activity]))
   const grouped = new Map<string, Task[]>()
-  for (const task of sortTasksByStartsAt(tasks)) {
+  for (const task of sortTasksByStartsAt(tasks, activities)) {
     const activity = byId.get(task.activityId)
     if (!activity || activity.status === "inbox") continue
     const day = taskDate(task.startsAt)
@@ -116,6 +138,7 @@ export function homePeriodGroups(
       if (from && to) return isTaskInRange(task, from, to)
       return true
     }),
+    activities,
   )
 
   const inRangeActivities =

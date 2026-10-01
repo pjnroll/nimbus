@@ -66,7 +66,7 @@ function DialogContent({
                 "inset-x-0 bottom-0 top-0 flex h-dvh max-h-dvh max-w-none translate-x-0 translate-y-0 flex-col gap-4 overflow-hidden rounded-none",
                 "data-open:slide-in-from-bottom-2 data-closed:slide-out-to-bottom-2",
                 // sm+: centered modal
-                "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:grid sm:h-auto sm:max-h-none sm:w-full sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:gap-6 sm:rounded-xl sm:overflow-visible",
+                "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:grid sm:h-auto sm:max-h-[min(90vh,56rem)] sm:w-full sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:grid-rows-[auto_minmax(0,1fr)_auto] sm:gap-4 sm:rounded-xl sm:overflow-hidden",
                 "sm:data-open:zoom-in-95 sm:data-open:slide-in-from-bottom-0 sm:data-closed:zoom-out-95 sm:data-closed:slide-out-to-bottom-0",
               ]
             : [

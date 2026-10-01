@@ -389,8 +389,9 @@ function ActivityDialogForm({
           aria-label="Titolo"
         />
       </DialogHeader>
-      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto pr-1 md:grid-cols-2 sm:max-h-[min(70vh,42rem)] sm:flex-none">
-        <div className="grid content-start gap-6">
+      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1">
+        <div className="grid content-start gap-4 md:grid-cols-2 md:gap-6">
+        <div className="grid content-start gap-4">
           <FormSection title="Responsabilità">
             <FormField label="Responsabile" htmlFor="act-responsible">
               <PersonField
@@ -400,7 +401,6 @@ function ActivityDialogForm({
                 onChange={(ids) => patch("responsibleId", ids[0] ?? null)}
                 onCreate={upsertPerson}
                 multiple={false}
-                suggestIds={projectPeople}
                 placeholder="Chi è accountable del risultato"
               />
             </FormField>
@@ -489,7 +489,7 @@ function ActivityDialogForm({
             </FormField>
           </FormSection>
         </div>
-        <div className="grid content-start gap-6">
+        <div className="grid content-start gap-4">
           <FormSection title="Piano">
             <FormField label="Progetto" htmlFor="act-project">
               <div className="grid gap-1.5">
@@ -594,6 +594,7 @@ function ActivityDialogForm({
                 type="date"
                 value={form.reminderOn}
                 onChange={(event) => patch("reminderOn", event.target.value)}
+                className="min-w-[12rem] w-auto"
               />
               {form.reminderOn && reminderCalendarUrl ? (
                 <div className="grid gap-1.5">
@@ -616,6 +617,8 @@ function ActivityDialogForm({
               ) : null}
             </FormField>
           </FormSection>
+        </div>
+        </div>
           <FormSection title="Pianificazione">
             {!form.taskPlanned ? (
               <Button
@@ -632,29 +635,32 @@ function ActivityDialogForm({
               </Button>
             ) : (
               <div className="grid gap-3">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <FormField label="Data" htmlFor="task-date">
+                <div className="flex min-w-0 flex-wrap gap-3">
+                  <FormField label="Data" htmlFor="task-date" className="min-w-[12rem] flex-1">
                     <Input
                       id="task-date"
                       type="date"
                       value={form.taskDate}
                       onChange={(event) => patch("taskDate", event.target.value)}
+                      className="min-w-[12rem] w-auto"
                     />
                   </FormField>
-                  <FormField label="Inizio" htmlFor="task-start">
+                  <FormField label="Inizio" htmlFor="task-start" className="min-w-[8.5rem] flex-1">
                     <Input
                       id="task-start"
                       type="time"
                       value={form.taskStart}
                       onChange={(event) => patch("taskStart", event.target.value)}
+                      className="min-w-[8.5rem] w-auto"
                     />
                   </FormField>
-                  <FormField label="Fine" htmlFor="task-end">
+                  <FormField label="Fine" htmlFor="task-end" className="min-w-[8.5rem] flex-1">
                     <Input
                       id="task-end"
                       type="time"
                       value={form.taskEnd}
                       onChange={(event) => patch("taskEnd", event.target.value)}
+                      className="min-w-[8.5rem] w-auto"
                     />
                   </FormField>
                 </div>
@@ -717,7 +723,6 @@ function ActivityDialogForm({
               </div>
             )}
           </FormSection>
-        </div>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <DialogFooter className={activity ? "sm:justify-between" : undefined}>

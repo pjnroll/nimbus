@@ -19,7 +19,12 @@ import {
   todayISO,
   type HomeRange,
 } from "@/lib/dates"
-import { homePeriodGroups, sortTasksByStartsAt, tasksByDay } from "@/lib/selectors"
+import {
+  homePeriodGroups,
+  sortActivitiesByTaskStartsAt,
+  sortTasksByStartsAt,
+  tasksByDay,
+} from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import {
   copyTextToClipboard,
@@ -29,10 +34,9 @@ import { taskByActivityId, taskDate } from "@/lib/tasks"
 import type { Activity } from "@/lib/types"
 
 const RANGE_TABS: { id: HomeRange; label: string }[] = [
-  { id: "oggi", label: "Oggi" },
-  { id: "settimana", label: "Questa settimana" },
   { id: "mese", label: "Mese" },
-  { id: "sempre", label: "Sempre" },
+  { id: "settimana", label: "Questa settimana" },
+  { id: "oggi", label: "Oggi" },
 ]
 
 function headingForRange(range: HomeRange): string {
@@ -44,8 +48,6 @@ function headingForRange(range: HomeRange): string {
       return `${hello}. Agenda della settimana.`
     case "mese":
       return `${hello}. Agenda del mese.`
-    case "sempre":
-      return `${hello}. Tutta l’agenda.`
   }
 }
 
@@ -71,21 +73,13 @@ export default function AgendaPage() {
     [store.activities, store.tasks, from, to, today],
   )
   const tasksActivities = useMemo(() => {
-    const ordered = sortTasksByStartsAt(groups.tasksInRange)
+    const ordered = sortTasksByStartsAt(groups.tasksInRange, store.activities)
     const activities = ordered
       .map((task) =>
         store.activities.find((activity) => activity.id === task.activityId),
       )
       .filter((activity): activity is Activity => Boolean(activity))
-    return [...activities].sort((a, b) => {
-      const taskA = taskByActivityId(store.tasks, a.id)
-      const taskB = taskByActivityId(store.tasks, b.id)
-      const startA = taskA?.startsAt ?? ""
-      const startB = taskB?.startsAt ?? ""
-      const byStart = startA.localeCompare(startB)
-      if (byStart !== 0) return byStart
-      return a.title.localeCompare(b.title, "it")
-    })
+    return sortActivitiesByTaskStartsAt(activities, store.tasks)
   }, [groups.tasksInRange, store.activities, store.tasks])
 
   const dayGroups = useMemo(() => {
@@ -100,7 +94,10 @@ export default function AgendaPage() {
     }
     return [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([day, activities]) => ({ day, activities }))
+      .map(([day, activities]) => ({
+        day,
+        activities: sortActivitiesByTaskStartsAt(activities, store.tasks),
+      }))
   }, [tasksActivities, store.tasks])
 
   const calendarTasks = useMemo(
@@ -110,12 +107,13 @@ export default function AgendaPage() {
 
   const selectedDayActivities = useMemo(() => {
     const dayTasks = calendarTasks.get(selectedDay) ?? []
-    return dayTasks
+    const activities = dayTasks
       .map((task) =>
         store.activities.find((activity) => activity.id === task.activityId),
       )
       .filter((activity): activity is Activity => Boolean(activity))
-  }, [calendarTasks, selectedDay, store.activities])
+    return sortActivitiesByTaskStartsAt(activities, store.tasks)
+  }, [calendarTasks, selectedDay, store.activities, store.tasks])
 
   function onStatus(
     id: string,
