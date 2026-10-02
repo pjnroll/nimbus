@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { CalendarIcon, ExternalLinkIcon } from "lucide-react"
 import { cn } from "cn"
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { normalizeEmail } from "@/lib/email"
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
 import {
@@ -40,7 +41,36 @@ import {
   type ActivitySource,
   type ActivityStatus,
   type Priority,
+  type Project,
 } from "@/lib/types"
+
+const DEMO_USER_NAME = "Pier Luigi Laviano"
+
+function displayNameFromEmail(email: string): string {
+  const local = email.split("@")[0] ?? email
+  const name = local
+    .replace(/[._+-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map(
+      (part) =>
+        part.charAt(0).toLocaleUpperCase("it") + part.slice(1).toLocaleLowerCase("it"),
+    )
+    .join(" ")
+  return name || email
+}
+
+function suggestedAssigneeId(
+  projects: Project[],
+  projectId: string,
+  userPersonId: string | null,
+): string | null {
+  if (projectId !== NONE_PROJECT) {
+    const managerId = projects.find((project) => project.id === projectId)?.managerId
+    if (managerId) return managerId
+  }
+  return userPersonId
+}
 
 const DIALOG_STATUSES: ActivityStatus[] = [
   "in_attesa",
@@ -187,15 +217,34 @@ function ActivityDialogForm({
     uploadActivityFiles,
     removeActivityAttachment,
     upsertPerson,
+    updatePerson,
     upsertCategory,
     readOnly,
   } = useNimbus()
   const existingTask = activity
     ? taskByActivityId(store.tasks, activity.id)
     : undefined
-  const [form, setForm] = useState<FormState>(() =>
-    activity ? fromActivity(activity, existingTask) : emptyForm(defaults),
-  )
+  const userPersonIdRef = useRef<string | null>(null)
+  const autoPersonIdRef = useRef<string | null>(null)
+  const [form, setForm] = useState<FormState>(() => {
+    if (readOnly) {
+      userPersonIdRef.current =
+        store.people.find((person) => person.name === DEMO_USER_NAME)?.id ?? null
+    }
+    if (activity) return fromActivity(activity, existingTask)
+    const base = emptyForm(defaults)
+    const suggested = suggestedAssigneeId(
+      store.projects,
+      base.projectId,
+      userPersonIdRef.current,
+    )
+    autoPersonIdRef.current = suggested
+    return {
+      ...base,
+      requesterId: suggested,
+      responsibleId: suggested,
+    }
+  })
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
@@ -203,6 +252,52 @@ function ActivityDialogForm({
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
   }
+
+  function assignAutoPeople(current: FormState, projectId: string): FormState {
+    const suggested = suggestedAssigneeId(
+      store.projects,
+      projectId,
+      userPersonIdRef.current,
+    )
+    const untouched =
+      current.requesterId === autoPersonIdRef.current &&
+      current.responsibleId === autoPersonIdRef.current
+    if (!untouched) return current
+    autoPersonIdRef.current = suggested
+    return {
+      ...current,
+      requesterId: suggested,
+      responsibleId: suggested,
+    }
+  }
+
+  useEffect(() => {
+    if (activity || readOnly) return
+    let cancelled = false
+    void fetch("/api/auth/me")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: unknown) => {
+        if (cancelled || !payload || typeof payload !== "object") return
+        if (!("email" in payload) || typeof payload.email !== "string") return
+        const email = normalizeEmail(payload.email)
+        const existing = store.people.find(
+          (person) => normalizeEmail(person.email) === email,
+        )
+        let personId = existing?.id ?? null
+        if (!personId) {
+          const created = upsertPerson(displayNameFromEmail(email))
+          if (!created) return
+          updatePerson(created.id, { email })
+          personId = created.id
+        }
+        userPersonIdRef.current = personId
+        setForm((current) => assignAutoPeople(current, current.projectId))
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [activity, readOnly, store.people, upsertPerson, updatePerson])
 
   function applyTask(activityId: string) {
     if (!form.taskPlanned) {
@@ -344,13 +439,19 @@ function ActivityDialogForm({
     const endsAt = form.taskEnd.trim()
       ? buildStartsAt(form.taskDate, form.taskEnd)
       : null
-    const executors = personNames(store.people, form.taskExecutorIds)
-    const detailsLines = [...calendarDetails]
+    const detailsLines: string[] = []
+    if (form.description.trim()) {
+      detailsLines.push(form.description.trim())
+    }
+    const waiting = personName(store.people, form.waitingOnPersonId)
+    if (waiting) {
+      detailsLines.push(`In attesa di: ${waiting}`)
+      if (form.waitingReason.trim()) {
+        detailsLines.push(`Motivo: ${form.waitingReason.trim()}`)
+      }
+    }
     if (form.taskNotes.trim()) {
       detailsLines.push(`Nota slot: ${form.taskNotes.trim()}`)
-    }
-    if (executors) {
-      detailsLines.push(`Esecutori: ${executors}`)
     }
     if (form.driveUrl.trim()) {
       detailsLines.push(`Drive: ${form.driveUrl.trim()}`)
@@ -362,7 +463,7 @@ function ActivityDialogForm({
       detailsLines,
       guestEmails: calendarGuestEmails(store.people, form.taskExecutorIds),
     })
-  }, [form, store.people, calendarDetails, eventTitle])
+  }, [form, store.people, eventTitle])
 
   const reminderCalendarUrl = useMemo(() => {
     if (!form.reminderOn) return null
@@ -449,11 +550,13 @@ function ActivityDialogForm({
                       const keep = nextProject?.categories.some(
                         (category) => category.id === current.categoryId,
                       )
-                      return {
+                      const next = {
                         ...current,
                         projectId: value,
                         categoryId: keep ? current.categoryId : null,
                       }
+                      if (activity) return next
+                      return assignAutoPeople(next, value)
                     })
                   }}
                   options={[
