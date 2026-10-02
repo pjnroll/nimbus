@@ -66,6 +66,7 @@ export function ActivityCard({
   const requesterName = personName(store.people, activity.requesterId)
   const responsibleName = personName(store.people, activity.responsibleId)
   const participantNames = personNames(store.people, activity.participantIds)
+  const waitingName = personName(store.people, activity.waitingOnPersonId)
   const taskPeople = task ? personNames(store.people, task.executorIds) : ""
   const categoryLabel = categoryName(project, activity.categoryId)
   const overdue =
@@ -136,6 +137,12 @@ export function ActivityCard({
           {!dense && !task && activity.reminderOn ? (
             <p className="mt-1 text-sm font-medium text-foreground">
               Scadenza · {formatDateIT(activity.reminderOn)}
+            </p>
+          ) : null}
+          {!dense && waitingName ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              In attesa di · {waitingName}
+              {activity.waitingReason ? ` · ${activity.waitingReason}` : ""}
             </p>
           ) : null}
         </button>
@@ -247,6 +254,8 @@ export function ActivityCard({
             {requesterName ||
             responsibleName ||
             participantNames ||
+            waitingName ||
+            waitingName ||
             !project ? (
               <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 {responsibleName ? (
@@ -265,6 +274,30 @@ export function ActivityCard({
                   <div>
                     <dt className="inline">Coinvolti</dt>
                     <dd className="inline"> · {participantNames}</dd>
+                  </div>
+                ) : null}
+                {waitingName ? (
+                  <div>
+                    <dt className="inline">In attesa di</dt>
+                    <dd className="inline">
+                      {" "}
+                      · {waitingName}
+                      {activity.waitingReason
+                        ? ` · ${activity.waitingReason}`
+                        : ""}
+                    </dd>
+                  </div>
+                ) : null}
+                {waitingName ? (
+                  <div>
+                    <dt className="inline">In attesa di</dt>
+                    <dd className="inline">
+                      {" "}
+                      · {waitingName}
+                      {activity.waitingReason
+                        ? ` · ${activity.waitingReason}`
+                        : ""}
+                    </dd>
                   </div>
                 ) : null}
                 {!project ? (

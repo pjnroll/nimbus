@@ -25,8 +25,8 @@ import {
 const ALL = "__all__"
 
 const BOARD_STATUSES = [
-  "in_attesa",
   "in_corso",
+  "in_attesa",
   "fatto",
   "fallita",
 ] as const satisfies readonly ActivityStatus[]
