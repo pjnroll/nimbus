@@ -35,8 +35,8 @@ import type { Activity } from "@/lib/types"
 
 const RANGE_TABS: { id: HomeRange; label: string }[] = [
   { id: "mese", label: "Mese" },
-  { id: "settimana", label: "Questa settimana" },
   { id: "oggi", label: "Oggi" },
+  { id: "settimana", label: "Questa settimana" },
 ]
 
 function headingForRange(range: HomeRange): string {
