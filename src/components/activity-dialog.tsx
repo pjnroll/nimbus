@@ -132,6 +132,9 @@ function fromActivity(
 const SHOW_DRIVE_AND_ATTACHMENTS = false
 const SHOW_CATEGORY = false
 
+const activitySectionClass =
+  "rounded-xl bg-muted/25 p-4 ring-1 ring-foreground/10 [&_h3]:text-foreground"
+
 const heroInputClass =
   "min-h-14 field-sizing-content resize-none border-input/80 px-3 py-2.5 font-heading text-xl leading-snug md:text-xl"
 
@@ -396,7 +399,7 @@ function ActivityDialogForm({
       </DialogHeader>
       <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1">
         <div className="grid content-start gap-4 md:grid-cols-2 md:gap-6">
-          <FormSection title="Persone">
+          <FormSection title="Persone" className={activitySectionClass}>
             <FormField label="Responsabile" htmlFor="act-responsible">
               <PersonField
                 id="act-responsible"
@@ -431,7 +434,7 @@ function ActivityDialogForm({
               />
             </FormField>
           </FormSection>
-          <FormSection title="Piano">
+          <FormSection title="Piano" className={activitySectionClass}>
             <FormField label="Progetto" htmlFor="act-project">
               <div className="grid gap-1.5">
                 <AppSelect
@@ -466,16 +469,15 @@ function ActivityDialogForm({
                 {form.projectId !== NONE_PROJECT ? (
                   <Button
                     type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto justify-start px-0"
+                    variant="outline"
+                    className="w-full justify-center"
                     onClick={() => {
                       onOpenChange(false)
                       router.push(`/progetti/${form.projectId}`)
                     }}
                   >
                     Vai al progetto
-                    <ExternalLinkIcon className="size-3.5" />
+                    <ExternalLinkIcon />
                   </Button>
                 ) : null}
               </div>
@@ -560,7 +562,7 @@ function ActivityDialogForm({
             </FormField>
           </FormSection>
         </div>
-        <FormSection title="Note">
+        <FormSection title="Note" className={activitySectionClass}>
           <Textarea
             id="act-desc"
             value={form.description}
@@ -601,7 +603,7 @@ function ActivityDialogForm({
             </>
           ) : null}
         </FormSection>
-        <FormSection title="Pianificazione">
+        <FormSection title="Pianificazione" className={activitySectionClass}>
             {!form.taskPlanned ? (
               <Button
                 type="button"
@@ -690,7 +692,8 @@ function ActivityDialogForm({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  size="sm"
+                  className="w-fit justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={() =>
                     setForm((current) => ({
                       ...current,
