@@ -21,6 +21,7 @@ export function ActivityList({
   showProjectName = true,
   density = "comfortable",
   showTaskSlot = false,
+  defaultExpanded = false,
   compactEmpty = false,
   onOpen,
   onStatus,
@@ -33,6 +34,7 @@ export function ActivityList({
   showProjectName?: boolean
   density?: ActivityCardDensity
   showTaskSlot?: boolean
+  defaultExpanded?: boolean
   compactEmpty?: boolean
   onOpen: (activity: Activity) => void
   onStatus: (
@@ -91,6 +93,7 @@ export function ActivityList({
             showProjectName={showProjectName}
             density={density}
             showTaskSlot={showTaskSlot}
+            defaultExpanded={defaultExpanded}
             onOpen={() => onOpen(activity)}
             onStatus={(status) => handleStatus(activity, status)}
             onDelete={() => onDelete(activity.id)}

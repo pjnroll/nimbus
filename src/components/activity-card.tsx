@@ -47,6 +47,7 @@ export function ActivityCard({
   showProjectName = true,
   density = "comfortable",
   showTaskSlot = false,
+  defaultExpanded = false,
   onOpen,
   onStatus,
   onDelete,
@@ -56,12 +57,13 @@ export function ActivityCard({
   showProjectName?: boolean
   density?: ActivityCardDensity
   showTaskSlot?: boolean
+  defaultExpanded?: boolean
   onOpen: () => void
   onStatus: (status: Activity["status"]) => void
   onDelete: () => void
 }) {
   const { store, readOnly } = useNimbus()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
   const responsibleName = personName(store.people, activity.responsibleId)

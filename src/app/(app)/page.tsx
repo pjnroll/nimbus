@@ -235,6 +235,7 @@ export default function AgendaPage() {
               projects={store.projects}
               density="dense"
               showTaskSlot
+              defaultExpanded
               compactEmpty
               onOpen={setSelected}
               onStatus={onStatus}
@@ -277,6 +278,7 @@ export default function AgendaPage() {
                   projects={store.projects}
                   density="dense"
                   showTaskSlot
+                  defaultExpanded
                   onOpen={setSelected}
                   onStatus={onStatus}
                   onDelete={onDelete}
