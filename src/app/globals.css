@@ -393,6 +393,57 @@
   }
 }
 
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  body[data-print="project-log"] {
+    background: #fff !important;
+    background-image: none !important;
+  }
+
+  body[data-print="project-log"] > :not(#project-log-print) {
+    display: none !important;
+  }
+
+  body[data-print="project-log"] #project-log-print {
+    display: block !important;
+    color: #111;
+    background: #fff;
+  }
+
+  body[data-print="project-log"] #project-log-print * {
+    color: #111 !important;
+    background: transparent !important;
+  }
+
+  body[data-print="project-log"] #project-log-print h1 {
+    margin: 0 0 0.4rem;
+    font-size: 1.6rem;
+  }
+
+  body[data-print="project-log"] #project-log-print h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+  }
+
+  body[data-print="project-log"] #project-log-print p {
+    margin: 0.15rem 0;
+  }
+
+  body[data-print="project-log"] #project-log-print header {
+    margin-bottom: 1.25rem;
+  }
+
+  body[data-print="project-log"] .project-log-entry {
+    break-inside: avoid;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #ccc;
+  }
+}
+
 @layer utilities {
   .app-atmosphere {
     background-image: var(--app-mesh);

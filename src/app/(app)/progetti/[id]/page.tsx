@@ -9,6 +9,7 @@ import { ActivityDialog } from "@/components/activity-dialog"
 import { ActivityList } from "@/components/activity-list"
 import { ProjectDialog } from "@/components/project-dialog"
 import { ProjectLog } from "@/components/project-log"
+import { ProjectLogPrint } from "@/components/project-log-print"
 import { CategoryBadge } from "@/components/status-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -205,7 +206,24 @@ export default function ProjectDetailPage({
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <ProjectLog entries={logEntries} onOpen={setSelected} />
+        <ProjectLog
+          entries={logEntries}
+          projectName={project.name}
+          onOpen={setSelected}
+        />
+        <ProjectLogPrint
+          project={project}
+          people={store.people}
+          entries={logEntries}
+          categoryLabel={
+            categoryFilter === ALL
+              ? undefined
+              : categoryFilter === NONE_CATEGORY
+                ? "Senza categoria"
+                : project.categories.find((category) => category.id === categoryFilter)
+                    ?.name
+          }
+        />
         <aside className="min-w-0 space-y-3 lg:sticky lg:top-4">
           <div>
             <h2 className="font-heading text-xl font-medium">Attività aperte</h2>

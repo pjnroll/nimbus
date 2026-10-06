@@ -1,16 +1,20 @@
 "use client"
 
-import { HistoryIcon } from "lucide-react"
+import { FileDownIcon, HistoryIcon } from "lucide-react"
 import { EmptyState } from "@/components/empty-state"
+import { exportProjectLogPdf } from "@/components/project-log-print"
 import { StatusBadge } from "@/components/status-badges"
+import { Button } from "@/components/ui/button"
 import { formatLogSlot, type ProjectLogEntry } from "@/lib/project-log"
 import type { Activity } from "@/lib/types"
 
 export function ProjectLog({
   entries,
+  projectName,
   onOpen,
 }: {
   entries: ProjectLogEntry[]
+  projectName: string
   onOpen: (activity: Activity) => void
 }) {
   const done = entries.filter((entry) => entry.activity.status === "fatto").length
@@ -18,15 +22,26 @@ export function ProjectLog({
 
   return (
     <section className="min-w-0 space-y-3">
-      <div>
-        <h2 className="font-heading text-xl font-medium">Log del progetto</h2>
-        <p className="text-sm text-muted-foreground">
-          {entries.length === 1 ? "1 esecuzione" : `${entries.length} esecuzioni`}
-          {" · "}
-          {done === 1 ? "1 fatta" : `${done} fatte`}
-          {" · "}
-          {failed === 1 ? "1 fallita" : `${failed} fallite`}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-heading text-xl font-medium">Log del progetto</h2>
+          <p className="text-sm text-muted-foreground">
+            {entries.length === 1 ? "1 esecuzione" : `${entries.length} esecuzioni`}
+            {" · "}
+            {done === 1 ? "1 fatta" : `${done} fatte`}
+            {" · "}
+            {failed === 1 ? "1 fallita" : `${failed} fallite`}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={entries.length === 0}
+          onClick={() => exportProjectLogPdf(projectName)}
+        >
+          <FileDownIcon data-icon="inline-start" />
+          Esporta PDF
+        </Button>
       </div>
       {entries.length === 0 ? (
         <EmptyState
