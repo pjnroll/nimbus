@@ -39,21 +39,18 @@ const RANGE_TABS: { id: HomeRange; label: string }[] = [
   { id: "settimana", label: "Questa settimana" },
 ]
 
-function headingForRange(range: HomeRange): string {
+function subtitleForRange(range: HomeRange): string {
   const hello = greetingForNow()
-  switch (range) {
-    case "oggi":
-      return `${hello}. Agenda di oggi.`
-    case "settimana":
-      return `${hello}. Agenda della settimana.`
-    case "mese":
-      return `${hello}. Agenda del mese.`
+  if (range === "mese") {
+    return `${hello}. I task pianificati sul mese. Scegli un giorno per vederne i dettagli.`
   }
+  return `${hello}. I tuoi impegni nel periodo scelto, giorno per giorno.`
 }
 
 export default function AgendaPage() {
   const { store, updateActivity, deleteActivity } = useNimbus()
   const [selected, setSelected] = useState<Activity | null>(null)
+  const [creating, setCreating] = useState(false)
   const [range, setRange] = useState<HomeRange>("mese")
   const today = todayISO()
   const [month, setMonth] = useState(today)
@@ -129,6 +126,15 @@ export default function AgendaPage() {
     toast.success("Attività eliminata")
   }
 
+  const focusDay =
+    range === "mese"
+      ? selectedDay
+      : range === "oggi"
+        ? today
+        : from && to && today >= from && today <= to
+          ? today
+          : (from ?? today)
+
   function selectCalendarDay(iso: string) {
     setSelectedDay(iso)
     setExportDate(iso)
@@ -153,22 +159,20 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-4">
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-muted-foreground capitalize">
-            {formatRangeIT(from, to)}
-          </p>
-          <h1 className="font-heading mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
-            {headingForRange(range)}
+          <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
+            Agenda
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            {range === "mese"
-              ? "I task pianificati sul mese. Scegli un giorno per vederne i dettagli."
-              : "I tuoi impegni nel periodo scelto, giorno per giorno."}
+            {subtitleForRange(range)}
           </p>
         </div>
-        <div className="surface-panel flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <Button onClick={() => setCreating(true)}>Nuova attività</Button>
+      </header>
+      <div className="surface-panel flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <Tabs
             value={range}
             onValueChange={(next) => {
@@ -183,22 +187,25 @@ export default function AgendaPage() {
               ))}
             </TabsList>
           </Tabs>
-          <div className="flex flex-wrap items-center gap-2">
-            {range === "mese" ? null : (
-              <Input
-                type="date"
-                value={exportDate}
-                onChange={(event) => setExportDate(event.target.value)}
-                aria-label="Giorno da esportare"
-                className="w-auto"
-              />
-            )}
-            <Button type="button" variant="outline" onClick={() => void copyDay()}>
-              Copia giornata
-            </Button>
-          </div>
+          <p className="text-sm font-medium text-muted-foreground capitalize">
+            {formatRangeIT(from, to)}
+          </p>
         </div>
-      </header>
+        <div className="flex flex-wrap items-center gap-2">
+          {range === "mese" ? null : (
+            <Input
+              type="date"
+              value={exportDate}
+              onChange={(event) => setExportDate(event.target.value)}
+              aria-label="Giorno da esportare"
+              className="w-auto"
+            />
+          )}
+          <Button type="button" variant="outline" onClick={() => void copyDay()}>
+            Copia giornata
+          </Button>
+        </div>
+      </div>
 
       {range === "mese" ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -296,6 +303,16 @@ export default function AgendaPage() {
           if (!open) setSelected(null)
         }}
         activity={selected}
+      />
+      <ActivityDialog
+        open={creating}
+        onOpenChange={setCreating}
+        heading="Nuova attività"
+        defaults={{
+          status: "in_corso",
+          taskPlanned: true,
+          taskDate: focusDay,
+        }}
       />
     </div>
   )
