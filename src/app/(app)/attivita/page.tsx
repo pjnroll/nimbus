@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { STATUS_LABELS } from "@/lib/labels"
-import { sortByTaskThenPriority } from "@/lib/selectors"
+import { overdueActivities, sortByTaskThenPriority } from "@/lib/selectors"
 import { activityCategoryName } from "@/lib/categories"
 import { activityPersonHaystack } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
@@ -54,6 +54,7 @@ export default function AttivitaPage() {
   const [selected, setSelected] = useState<Activity | null>(null)
   const [creating, setCreating] = useState(false)
   const [openColumns, setOpenColumns] = useState(DEFAULT_OPEN)
+  const [overdueOpen, setOverdueOpen] = useState(true)
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -106,6 +107,19 @@ export default function AttivitaPage() {
     projectId,
     categoryId,
   ])
+
+  const overdue = useMemo(
+    () =>
+      sortByTaskThenPriority(
+        overdueActivities(filtered, store.tasks),
+        store.tasks,
+      ),
+    [filtered, store.tasks],
+  )
+  const overdueIds = useMemo(
+    () => new Set(overdue.map((activity) => activity.id)),
+    [overdue],
+  )
 
   const selectedProject =
     projectId !== ALL && projectId !== NONE_PROJECT
@@ -219,11 +233,42 @@ export default function AttivitaPage() {
             emptyDescription="Svuota la ricerca o cambia stato e progetto."
           />
         </TabsContent>
-        <TabsContent value="bacheca" className="mt-4">
+        <TabsContent value="bacheca" className="mt-4 space-y-6">
+          {overdue.length > 0 ? (
+            <section className="min-w-0 space-y-2">
+              <button
+                type="button"
+                onClick={() => setOverdueOpen((current) => !current)}
+                className="font-heading flex w-full items-center gap-2 text-left text-lg font-semibold tracking-tight text-red-700"
+                aria-expanded={overdueOpen}
+              >
+                {overdueOpen ? (
+                  <ChevronDownIcon className="size-4 shrink-0" />
+                ) : (
+                  <ChevronRightIcon className="size-4 shrink-0" />
+                )}
+                <span className="flex-1">In ritardo</span>
+                <span className="text-sm font-medium">{overdue.length}</span>
+              </button>
+              {overdueOpen ? (
+                <ActivityList
+                  activities={overdue}
+                  projects={store.projects}
+                  density="dense"
+                  onOpen={setSelected}
+                  onStatus={onStatus}
+                  onDelete={onDelete}
+                  emptyTitle="Nessuna attività in ritardo"
+                  emptyDescription="Non ci sono pianificazioni scadute con i filtri attuali."
+                />
+              ) : null}
+            </section>
+          ) : null}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {BOARD_STATUSES.map((column) => {
               const columnActivities = filtered.filter(
-                (activity) => activity.status === column,
+                (activity) =>
+                  activity.status === column && !overdueIds.has(activity.id),
               )
               const open = openColumns[column]
               return (
