@@ -19,7 +19,7 @@ export function addDaysISO(days: number, from = new Date()): string {
   return toISODate(next)
 }
 
-export const HOME_RANGES = ["mese", "settimana", "oggi"] as const
+export const HOME_RANGES = ["mese", "settimana"] as const
 export type HomeRange = (typeof HOME_RANGES)[number]
 
 export function isHomeRange(value: string): value is HomeRange {
@@ -62,6 +62,12 @@ export function monthGridDays(iso = todayISO()): string[] {
   return Array.from({ length: 42 }, (_, index) => addDaysISO(index, parseISODate(start)))
 }
 
+/** Monday–Sunday week that contains `iso`. */
+export function weekDays(iso = todayISO()): string[] {
+  const start = startOfWeekMonday(iso)
+  return Array.from({ length: 7 }, (_, index) => addDaysISO(index, parseISODate(start)))
+}
+
 export function formatMonthYearIT(iso: string): string {
   return parseISODate(iso).toLocaleDateString("it-IT", {
     month: "long",
@@ -71,15 +77,16 @@ export function formatMonthYearIT(iso: string): string {
 
 export function homeRangeBounds(
   range: HomeRange,
-  today = todayISO(),
+  anchor = todayISO(),
 ): { from: string | null; to: string | null } {
   switch (range) {
-    case "oggi":
-      return { from: today, to: today }
     case "settimana":
-      return { from: startOfWeekMonday(today), to: endOfWeekSunday(today) }
+      return {
+        from: startOfWeekMonday(anchor),
+        to: endOfWeekSunday(anchor),
+      }
     case "mese":
-      return { from: startOfMonth(today), to: endOfMonth(today) }
+      return { from: startOfMonth(anchor), to: endOfMonth(anchor) }
   }
 }
 

@@ -3,12 +3,18 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
+  addDaysISO,
   addMonthsISO,
+  endOfWeekSunday,
   formatMonthYearIT,
+  formatRangeIT,
   monthGridDays,
   parseISODate,
   startOfMonth,
+  startOfWeekMonday,
   todayISO,
+  weekDays,
+  type HomeRange,
 } from "@/lib/dates"
 import { projectSwatchClass } from "@/lib/project-color"
 import { closedActivity, isTaskOverdue, taskTime } from "@/lib/tasks"
@@ -27,38 +33,55 @@ function slotLabel(task: Task): string {
 }
 
 export function AgendaCalendar({
-  month,
+  view,
+  anchor,
   selectedDay,
   today = todayISO(),
   tasksByDay,
   activities,
   projects,
-  onMonthChange,
+  onAnchorChange,
   onSelectDay,
+  onFocusToday,
   onOpenActivity,
   onCreateActivity,
 }: {
-  month: string
+  view: HomeRange
+  anchor: string
   selectedDay: string
   today?: string
   tasksByDay: Map<string, Task[]>
   activities: Activity[]
   projects: Project[]
-  onMonthChange: (iso: string) => void
+  onAnchorChange: (iso: string) => void
   onSelectDay: (iso: string) => void
+  onFocusToday: () => void
   onOpenActivity: (activity: Activity) => void
   onCreateActivity: (iso: string) => void
 }) {
-  const monthStart = startOfMonth(month)
-  const days = monthGridDays(monthStart)
+  const week = view === "settimana"
+  const monthStart = startOfMonth(anchor)
+  const weekStart = startOfWeekMonday(anchor)
+  const days = week ? weekDays(anchor) : monthGridDays(monthStart)
+  const title = week
+    ? formatRangeIT(weekStart, endOfWeekSunday(anchor))
+    : formatMonthYearIT(monthStart)
   const activityById = new Map(
     activities.map((activity) => [activity.id, activity]),
   )
   const projectById = new Map(projects.map((project) => [project.id, project]))
 
   function selectDay(iso: string) {
-    if (startOfMonth(iso) !== monthStart) onMonthChange(iso)
+    if (!week && startOfMonth(iso) !== monthStart) onAnchorChange(iso)
     onSelectDay(iso)
+  }
+
+  function shift(direction: -1 | 1) {
+    onAnchorChange(
+      week
+        ? addDaysISO(direction * 7, parseISODate(weekStart))
+        : addMonthsISO(direction, monthStart),
+    )
   }
 
   return (
@@ -69,33 +92,25 @@ export function AgendaCalendar({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Mese precedente"
-            onClick={() => onMonthChange(addMonthsISO(-1, monthStart))}
+            aria-label={week ? "Settimana precedente" : "Mese precedente"}
+            onClick={() => shift(-1)}
           >
             <ChevronLeftIcon />
           </Button>
           <h2 className="font-heading min-w-40 text-center text-lg font-semibold capitalize">
-            {formatMonthYearIT(monthStart)}
+            {title}
           </h2>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Mese successivo"
-            onClick={() => onMonthChange(addMonthsISO(1, monthStart))}
+            aria-label={week ? "Settimana successiva" : "Mese successivo"}
+            onClick={() => shift(1)}
           >
             <ChevronRightIcon />
           </Button>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            onMonthChange(today)
-            onSelectDay(today)
-          }}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={onFocusToday}>
           Oggi
         </Button>
       </div>
@@ -109,7 +124,7 @@ export function AgendaCalendar({
         </div>
         <div className="grid grid-cols-7">
           {days.map((iso) => {
-            const inMonth = startOfMonth(iso) === monthStart
+            const inMonth = week || startOfMonth(iso) === monthStart
             const isToday = iso === today
             const isSelected = iso === selectedDay
             const dayTasks = tasksByDay.get(iso) ?? []
