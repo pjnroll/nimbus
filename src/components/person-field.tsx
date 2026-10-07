@@ -191,13 +191,28 @@ export function PersonField({
           className={cn(
             "flex min-h-10 w-full flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-1.5 py-1 text-base transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 md:min-h-8 md:text-sm",
           )}
-          onClick={() => inputRef.current?.focus()}
+          onClick={(event) => {
+            const target =
+              event.target instanceof Element
+                ? event.target
+                : event.target instanceof Node
+                  ? event.target.parentElement
+                  : null
+            if (target?.closest("[data-person-chip]")) return
+            inputRef.current?.focus()
+            setOpen(true)
+          }}
         >
           {selected.map((person) => (
             <Badge
               key={person.id}
               variant="secondary"
+              data-person-chip=""
               className="h-6 gap-0.5 pr-0.5"
+              onClick={(event) => {
+                event.stopPropagation()
+                setOpen(false)
+              }}
             >
               <PersonLabel person={person} />
               <button
@@ -222,7 +237,7 @@ export function PersonField({
                 setQuery(event.target.value)
                 setOpen(true)
               }}
-              onFocus={() => setOpen(true)}
+              onClick={() => setOpen(true)}
               onKeyDown={onKeyDown}
               placeholder={selected.length === 0 ? placeholder : ""}
               className="min-w-24 flex-1 bg-transparent px-1 py-0.5 text-base outline-none placeholder:text-muted-foreground md:text-sm"
