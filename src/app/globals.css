@@ -381,15 +381,12 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: var(--app-mesh);
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
   }
   .font-heading {
     font-family: var(--font-heading);
-    letter-spacing: -0.03em;
   }
 }
 
@@ -445,11 +442,8 @@
 }
 
 @layer utilities {
-  .app-atmosphere {
-    background-image: var(--app-mesh);
-    background-attachment: fixed;
-  }
+  .surface,
   .surface-panel {
-    @apply rounded-2xl bg-card/85 shadow-sm ring-1 ring-foreground/8 backdrop-blur-md;
+    @apply rounded-2xl bg-card shadow-sm;
   }
 }

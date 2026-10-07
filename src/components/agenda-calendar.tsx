@@ -97,7 +97,7 @@ export function AgendaCalendar({
           Oggi
         </Button>
       </div>
-      <div className="overflow-hidden rounded-2xl bg-card/85 shadow-sm ring-1 ring-foreground/8 backdrop-blur-md">
+      <div className="surface overflow-hidden">
         <div className="grid grid-cols-7 border-b border-border/70 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {WEEKDAYS.map((label) => (
             <div key={label} className="px-1 py-2">

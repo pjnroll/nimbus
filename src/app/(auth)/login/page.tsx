@@ -86,10 +86,10 @@ function LoginCard() {
   }, [])
 
   return (
-    <Card className="w-full max-w-md border-foreground/8 bg-card/90 shadow-xl shadow-[color:var(--surface-glow)] ring-1 ring-foreground/10 backdrop-blur-md">
+    <Card className="w-full max-w-md bg-card shadow-md ring-0">
       <CardHeader className="gap-3">
         <div className="mb-1 flex items-center gap-3">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-[0_0_28px] shadow-[color:var(--surface-glow)] ring-1 ring-primary/25">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
             <CloudIcon className="size-6" />
           </span>
           <p className="font-heading text-2xl font-semibold tracking-tight">

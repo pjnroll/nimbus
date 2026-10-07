@@ -50,7 +50,7 @@ export function ProjectLog({
           description="Chiudi un’attività come Fatta o Fallita per vederla qui."
         />
       ) : (
-        <ol className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card/85 shadow-sm ring-1 ring-foreground/8 backdrop-blur-md">
+        <ol className="surface divide-y divide-border overflow-hidden">
           {entries.map((entry) => {
             const note = entry.activity.closingNote.trim()
             return (

@@ -179,7 +179,7 @@ export default function AgendaPage() {
               if (typeof next === "string" && isHomeRange(next)) setRange(next)
             }}
           >
-            <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start bg-transparent sm:w-fit">
+            <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start sm:w-fit">
               {RANGE_TABS.map((tab) => (
                 <TabsTrigger key={tab.id} value={tab.id}>
                   {tab.label}

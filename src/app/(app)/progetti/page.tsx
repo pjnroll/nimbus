@@ -107,7 +107,7 @@ export default function ProgettiPage() {
 
   function renderList(projects: Project[]) {
     return (
-      <div className="divide-y divide-foreground/8 overflow-hidden rounded-2xl bg-card/90 shadow-sm ring-1 ring-foreground/8 backdrop-blur-sm">
+      <div className="surface divide-y divide-border overflow-hidden">
         {projects.map((project) => (
           <ProjectRow
             key={project.id}

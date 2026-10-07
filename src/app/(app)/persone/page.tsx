@@ -129,7 +129,7 @@ function PersonGroup({
       <h2 className="font-heading text-sm font-medium tracking-wide uppercase">
         {title}
       </h2>
-      <div className="divide-y divide-foreground/8 overflow-hidden rounded-2xl bg-card/90 shadow-sm ring-1 ring-foreground/8 backdrop-blur-sm">
+      <div className="surface divide-y divide-border overflow-hidden">
         {people.map((person) => (
           <button
             key={person.id}

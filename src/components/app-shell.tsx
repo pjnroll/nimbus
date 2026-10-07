@@ -46,9 +46,9 @@ const STATUS_ORDER: Record<ProjectStatus, number> = {
 
 const navLinkClass = (active: boolean) =>
   cn(
-    "flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+    "flex min-h-11 items-center gap-2.5 rounded-full px-3 py-2.5 text-sm font-medium transition-colors",
     active
-      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/15"
+      ? "bg-sidebar-accent text-sidebar-accent-foreground"
       : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
   )
 
@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-full">
       <aside
         className={cn(
-          "sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar/95 text-sidebar-foreground shadow-sm backdrop-blur-md",
+          "sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
           collapsed ? "md:hidden" : "md:flex",
         )}
       >
@@ -90,10 +90,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Nav pathname={pathname} />
         <SidebarFooter />
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col app-atmosphere">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header
           className={cn(
-            "sticky top-0 z-30 flex items-center gap-2 border-b border-foreground/8 bg-background/75 px-4 py-3 backdrop-blur-md",
+            "sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background px-4 py-3",
             collapsed ? "flex" : "md:hidden",
           )}
         >
@@ -129,7 +129,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="sr-only">Mostra menu</span>
           </Button>
           <div className="flex flex-1 items-center gap-2 font-heading text-lg font-semibold tracking-tight">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary shadow-[0_0_0_1px] shadow-primary/20">
+            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/15 text-primary">
               <CloudIcon className="size-4" />
             </span>
             Nimbus
@@ -176,7 +176,7 @@ function Brand({ onHide }: { onHide?: () => void }) {
   return (
     <div className="border-b border-sidebar-border px-5 py-6">
       <div className="flex items-center gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-[0_0_24px] shadow-[color:var(--surface-glow)] ring-1 ring-primary/25">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
           <CloudIcon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -283,9 +283,9 @@ function Nav({
                       aria-current={active ? "page" : undefined}
                       title={project.name}
                       className={cn(
-                        "flex min-h-9 items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                        "flex min-h-9 items-center gap-2.5 rounded-full px-3 py-2 text-sm font-medium transition-colors",
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/15"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                         closed
                           ? "text-muted-foreground"

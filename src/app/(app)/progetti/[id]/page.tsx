@@ -99,7 +99,7 @@ export default function ProjectDetailPage({
         <span className="text-muted-foreground"> / </span>
         <span>{project.name}</span>
       </p>
-      <header className="flex flex-col gap-4 rounded-2xl bg-card/85 p-5 shadow-sm ring-1 ring-foreground/8 backdrop-blur-md lg:flex-row lg:items-start lg:justify-between">
+      <header className="surface flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <Badge variant="outline" className={cn("mb-2", statusStyle[project.status])}>
             {PROJECT_STATUS_LABELS[project.status]}
