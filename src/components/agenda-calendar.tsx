@@ -36,6 +36,7 @@ export function AgendaCalendar({
   onMonthChange,
   onSelectDay,
   onOpenActivity,
+  onCreateActivity,
 }: {
   month: string
   selectedDay: string
@@ -46,6 +47,7 @@ export function AgendaCalendar({
   onMonthChange: (iso: string) => void
   onSelectDay: (iso: string) => void
   onOpenActivity: (activity: Activity) => void
+  onCreateActivity: (iso: string) => void
 }) {
   const monthStart = startOfMonth(month)
   const days = monthGridDays(monthStart)
@@ -124,6 +126,10 @@ export function AgendaCalendar({
                 <button
                   type="button"
                   onClick={() => selectDay(iso)}
+                  onDoubleClick={() => {
+                    selectDay(iso)
+                    onCreateActivity(iso)
+                  }}
                   aria-current={isToday ? "date" : undefined}
                   aria-pressed={isSelected}
                   aria-label={parseISODate(iso).toLocaleDateString("it-IT", {

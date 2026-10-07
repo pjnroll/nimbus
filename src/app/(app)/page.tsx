@@ -218,6 +218,11 @@ export default function AgendaPage() {
             projects={store.projects}
             onMonthChange={(iso) => setMonth(startOfMonth(iso))}
             onSelectDay={selectCalendarDay}
+            onCreateActivity={(iso) => {
+              selectCalendarDay(iso)
+              setSelected(null)
+              setCreating(true)
+            }}
             onOpenActivity={(activity) => {
               const task = taskByActivityId(store.tasks, activity.id)
               if (task) selectCalendarDay(taskDate(task.startsAt))
@@ -305,6 +310,7 @@ export default function AgendaPage() {
         activity={selected}
       />
       <ActivityDialog
+        key={focusDay}
         open={creating}
         onOpenChange={setCreating}
         heading="Nuova attività"
