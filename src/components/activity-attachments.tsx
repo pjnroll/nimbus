@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { PaperclipIcon, XIcon } from "lucide-react"
 import { toast } from "sonner"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -54,6 +56,10 @@ export function ActivityAttachmentsField({
   onRemove?: (attachmentId: string) => Promise<void>
   disabled?: boolean
 }) {
+  const [pendingRemove, setPendingRemove] = useState<ActivityAttachment | null>(
+    null,
+  )
+
   async function onPick(list: FileList | null) {
     if (!list || list.length === 0) return
     const files = [...list]
@@ -116,11 +122,7 @@ export function ActivityAttachmentsField({
                   size="icon-xs"
                   className="text-muted-foreground"
                   disabled={disabled}
-                  onClick={() => {
-                    void onRemove(attachment.id).catch(() => {
-                      toast.error("Non riesco a eliminare l’allegato")
-                    })
-                  }}
+                  onClick={() => setPendingRemove(attachment)}
                 >
                   <XIcon />
                   <span className="sr-only">Rimuovi {attachment.name}</span>
@@ -151,6 +153,21 @@ export function ActivityAttachmentsField({
           ))}
         </ul>
       ) : null}
+      <ConfirmDialog
+        open={pendingRemove != null}
+        onOpenChange={(next) => {
+          if (!next) setPendingRemove(null)
+        }}
+        title="Eliminare l’allegato?"
+        confirmLabel="Elimina"
+        onConfirm={() => {
+          if (!pendingRemove || !onRemove) return
+          const attachment = pendingRemove
+          void onRemove(attachment.id).catch(() => {
+            toast.error("Non riesco a eliminare l’allegato")
+          })
+        }}
+      />
     </div>
   )
 }

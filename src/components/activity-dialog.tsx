@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
 import { ActivityAttachmentsField } from "@/components/activity-attachments"
 import { CategoryField } from "@/components/category-field"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { FormField, FormSection } from "@/components/form-section"
 import { PersonField } from "@/components/person-field"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -248,6 +249,7 @@ function ActivityDialogForm({
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+  const [confirm, setConfirm] = useState<"activity" | "task" | null>(null)
 
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -483,6 +485,7 @@ function ActivityDialogForm({
     : []
 
   return (
+    <>
     <DialogContent size="lg">
       <DialogHeader className="gap-3 pr-8">
         <DialogTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -797,17 +800,7 @@ function ActivityDialogForm({
                   variant="ghost"
                   size="sm"
                   className="w-fit justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() =>
-                    setForm((current) => ({
-                      ...current,
-                      taskPlanned: false,
-                      taskDate: "",
-                      taskStart: "",
-                      taskEnd: "",
-                      taskExecutorIds: [],
-                      taskNotes: "",
-                    }))
-                  }
+                  onClick={() => setConfirm("task")}
                 >
                   Rimuovi task
                 </Button>
@@ -821,7 +814,7 @@ function ActivityDialogForm({
           <Button
             variant="ghost"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={remove}
+            onClick={() => setConfirm("activity")}
             disabled={readOnly}
           >
             Elimina
@@ -844,5 +837,34 @@ function ActivityDialogForm({
         </div>
       </DialogFooter>
     </DialogContent>
+    <ConfirmDialog
+      open={confirm === "activity"}
+      onOpenChange={(next) => {
+        if (!next) setConfirm(null)
+      }}
+      title="Eliminare l’attività?"
+      confirmLabel="Elimina"
+      onConfirm={remove}
+    />
+    <ConfirmDialog
+      open={confirm === "task"}
+      onOpenChange={(next) => {
+        if (!next) setConfirm(null)
+      }}
+      title="Rimuovere il task?"
+      confirmLabel="Rimuovi"
+      onConfirm={() =>
+        setForm((current) => ({
+          ...current,
+          taskPlanned: false,
+          taskDate: "",
+          taskStart: "",
+          taskEnd: "",
+          taskExecutorIds: [],
+          taskNotes: "",
+        }))
+      }
+    />
+    </>
   )
 }

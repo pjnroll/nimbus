@@ -10,6 +10,7 @@ import {
   PaperclipIcon,
 } from "lucide-react"
 import { ActivityAttachmentLinks } from "@/components/activity-attachments"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -64,6 +65,7 @@ export function ActivityCard({
 }) {
   const { store, readOnly } = useNimbus()
   const [expanded, setExpanded] = useState(defaultExpanded)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const task = taskByActivityId(store.tasks, activity.id)
   const requesterName = personName(store.people, activity.requesterId)
   const responsibleName = personName(store.people, activity.responsibleId)
@@ -206,7 +208,10 @@ export function ActivityCard({
             {readOnly ? null : (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setConfirmDelete(true)}
+                >
                   Elimina
                 </DropdownMenuItem>
               </>
@@ -354,6 +359,13 @@ export function ActivityCard({
           </Button>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Eliminare l’attività?"
+        confirmLabel="Elimina"
+        onConfirm={onDelete}
+      />
     </article>
   )
 }

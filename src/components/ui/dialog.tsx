@@ -41,6 +41,7 @@ function DialogOverlay({
 
 function DialogContent({
   className,
+  overlayClassName,
   children,
   showCloseButton = true,
   size = "default",
@@ -48,12 +49,13 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
   size?: "default" | "lg"
+  overlayClassName?: string
 }) {
   const isLg = size === "lg"
 
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         data-size={size}

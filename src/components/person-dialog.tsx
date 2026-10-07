@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { FormField } from "@/components/form-section"
 import { PersonField } from "@/components/person-field"
 import { Button } from "@/components/ui/button"
@@ -85,6 +86,7 @@ function PersonDialogForm({
     person ? fromPerson(person) : emptyForm(defaultKind),
   )
   const [error, setError] = useState("")
+  const [confirmArchive, setConfirmArchive] = useState(false)
 
   function save() {
     const name = cleanPersonName(form.name)
@@ -149,6 +151,7 @@ function PersonDialogForm({
   )
 
   return (
+    <>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>
@@ -234,7 +237,7 @@ function PersonDialogForm({
             <Button
               variant="ghost"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={archive}
+              onClick={() => setConfirmArchive(true)}
               disabled={readOnly}
             >
               Disattiva
@@ -254,5 +257,13 @@ function PersonDialogForm({
         </div>
       </DialogFooter>
     </DialogContent>
+    <ConfirmDialog
+      open={confirmArchive}
+      onOpenChange={setConfirmArchive}
+      title="Disattivare?"
+      confirmLabel="Disattiva"
+      onConfirm={archive}
+    />
+    </>
   )
 }

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { AppSelect } from "@/components/app-select"
 import { CategoryField } from "@/components/category-field"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { FormField, FormSection } from "@/components/form-section"
 import { PersonField } from "@/components/person-field"
 import { Button } from "@/components/ui/button"
@@ -116,6 +117,7 @@ function ProjectDialogForm({
     project ? fromProject(project) : emptyForm(),
   )
   const [error, setError] = useState("")
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   function save() {
     if (!form.name.trim()) {
@@ -159,6 +161,7 @@ function ProjectDialogForm({
   }
 
   return (
+    <>
     <DialogContent size="lg">
       <DialogHeader className="gap-3 pr-8">
         <DialogTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -311,7 +314,7 @@ function ProjectDialogForm({
           <Button
             variant="ghost"
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={remove}
+            onClick={() => setConfirmDelete(true)}
             disabled={readOnly}
           >
             Elimina
@@ -330,5 +333,13 @@ function ProjectDialogForm({
         </div>
       </DialogFooter>
     </DialogContent>
+    <ConfirmDialog
+      open={confirmDelete}
+      onOpenChange={setConfirmDelete}
+      title="Eliminare il progetto?"
+      confirmLabel="Elimina"
+      onConfirm={remove}
+    />
+    </>
   )
 }
