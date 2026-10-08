@@ -188,8 +188,8 @@ export function AgendaCalendar({
                           }}
                           className={cn(
                             "flex w-full min-w-0 items-center gap-1 rounded px-0.5 py-0.5 text-left text-[11px] leading-tight hover:bg-muted/80",
-                            activity.status === "fatto" &&
-                              "text-muted-foreground line-through",
+                            closedActivity(activity.status) && "line-through",
+                            activity.status === "fatto" && "text-muted-foreground",
                             activity.status === "fallita" && "text-red-700/80",
                             overdue && "text-red-700",
                           )}

@@ -76,6 +76,13 @@ export function ActivityCard({
   const overdue =
     !closedActivity(activity.status) &&
     Boolean(task && isTaskOverdue(task, todayISO()))
+  const closedPositive = activity.status === "fatto"
+  const closedNegative = activity.status === "fallita"
+  const closedClass = closedPositive
+    ? "text-muted-foreground line-through"
+    : closedNegative
+      ? "text-red-700/80 line-through"
+      : ""
   const dense = density === "dense"
   const showDetails = !dense || expanded
   const borderClass = projectBorderClass(project)
@@ -119,7 +126,8 @@ export function ActivityCard({
           ) : null}
           <h3
             className={cn(
-              "font-heading leading-snug font-medium text-foreground",
+              "font-heading leading-snug font-medium",
+              closedClass || "text-foreground",
               dense ? "mt-0.5 line-clamp-2 text-sm" : "mt-0.5 text-base",
             )}
           >
@@ -130,7 +138,7 @@ export function ActivityCard({
               className={cn(
                 "font-medium",
                 dense ? "mt-0.5 text-xs" : "mt-1 text-sm",
-                overdue ? "text-red-700" : "text-foreground",
+                closedClass || (overdue ? "text-red-700" : "text-foreground"),
               )}
             >
               {overdue ? "In ritardo · " : ""}
@@ -236,7 +244,7 @@ export function ActivityCard({
               <p
                 className={cn(
                   "mb-1 text-xs font-medium",
-                  overdue ? "text-red-700" : "text-foreground",
+                  closedClass || (overdue ? "text-red-700" : "text-foreground"),
                 )}
               >
                 {overdue ? "In ritardo · " : ""}
