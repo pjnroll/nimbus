@@ -10,11 +10,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { STATUS_LABELS } from "@/lib/labels"
-import { overdueActivities, sortByTaskThenPriority } from "@/lib/selectors"
+import {
+  overdueActivities,
+  sortActivitiesByScheduleAscending,
+  sortByTaskThenPriority,
+} from "@/lib/selectors"
 import { activityCategoryName } from "@/lib/categories"
 import { activityPersonHaystack } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
-import { taskByActivityId } from "@/lib/tasks"
+import { closedActivity, taskByActivityId } from "@/lib/tasks"
 import {
   NONE_CATEGORY,
   NONE_PROJECT,
@@ -96,7 +100,15 @@ export default function AttivitaPage() {
         .toLowerCase()
       return haystack.includes(needle)
     })
-    return sortByTaskThenPriority(list, store.tasks)
+    const open = sortActivitiesByScheduleAscending(
+      list.filter((activity) => !closedActivity(activity.status)),
+      store.tasks,
+    )
+    const closed = sortByTaskThenPriority(
+      list.filter((activity) => closedActivity(activity.status)),
+      store.tasks,
+    )
+    return [...open, ...closed]
   }, [
     store.activities,
     store.projects,
@@ -109,11 +121,7 @@ export default function AttivitaPage() {
   ])
 
   const overdue = useMemo(
-    () =>
-      sortByTaskThenPriority(
-        overdueActivities(filtered, store.tasks),
-        store.tasks,
-      ),
+    () => overdueActivities(filtered, store.tasks),
     [filtered, store.tasks],
   )
   const overdueIds = useMemo(

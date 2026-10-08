@@ -91,6 +91,24 @@ export function sortActivitiesByTaskStartsAt(
   })
 }
 
+/** Earliest planned start first, including time. Activities without a task stay at the end. */
+export function sortActivitiesByScheduleAscending(
+  activities: Activity[],
+  tasks: Task[],
+): Activity[] {
+  const priorityRank = { alta: 0, media: 1, bassa: 2 }
+  return [...activities].sort((a, b) => {
+    const startA = taskByActivityId(tasks, a.id)?.startsAt ?? ""
+    const startB = taskByActivityId(tasks, b.id)?.startsAt ?? ""
+    if (startA && startB && startA !== startB) return startA.localeCompare(startB)
+    if (startA && !startB) return -1
+    if (!startA && startB) return 1
+    const byPriority = priorityRank[a.priority] - priorityRank[b.priority]
+    if (byPriority !== 0) return byPriority
+    return a.title.localeCompare(b.title, "it")
+  })
+}
+
 /** Planned tasks grouped by local calendar day (open, fatto, fallita; not inbox). */
 export function tasksByDay(
   tasks: Task[],
