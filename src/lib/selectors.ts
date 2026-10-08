@@ -91,6 +91,26 @@ export function sortActivitiesByTaskStartsAt(
   })
 }
 
+/** Earliest date first: task start, otherwise the due date. Undated activities stay at the end. */
+export function sortActivitiesByDateAscending(
+  activities: Activity[],
+  tasks: Task[],
+): Activity[] {
+  function key(activity: Activity): string {
+    const start = taskByActivityId(tasks, activity.id)?.startsAt ?? ""
+    if (start) return start
+    return activity.reminderOn ?? ""
+  }
+  return [...activities].sort((a, b) => {
+    const keyA = key(a)
+    const keyB = key(b)
+    if (keyA && keyB && keyA !== keyB) return keyA.localeCompare(keyB)
+    if (keyA && !keyB) return -1
+    if (!keyA && keyB) return 1
+    return a.title.localeCompare(b.title, "it")
+  })
+}
+
 /** Earliest planned start first, including time. Activities without a task stay at the end. */
 export function sortActivitiesByScheduleAscending(
   activities: Activity[],

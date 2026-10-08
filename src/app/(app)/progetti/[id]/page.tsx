@@ -16,7 +16,10 @@ import { Button } from "@/components/ui/button"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { personName, personNames } from "@/lib/people"
 import { projectLogEntries } from "@/lib/project-log"
-import { openActivities, sortByTaskThenPriority } from "@/lib/selectors"
+import {
+  openActivities,
+  sortActivitiesByDateAscending,
+} from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import { NONE_CATEGORY, type Activity } from "@/lib/types"
 import { safeHttpUrl } from "@/lib/urls"
@@ -57,17 +60,20 @@ export default function ProjectDetailPage({
     }
   }, [project, categoryFilter])
 
-  const activities = useMemo(() => {
-    const mine = store.activities.filter((activity) => activity.projectId === id)
-    return sortByTaskThenPriority(mine, store.tasks)
-  }, [store.activities, store.tasks, id])
+  const activities = useMemo(
+    () => store.activities.filter((activity) => activity.projectId === id),
+    [store.activities, id],
+  )
 
   const visible = activities.filter((activity) => {
     if (categoryFilter === ALL) return true
     if (categoryFilter === NONE_CATEGORY) return !activity.categoryId
     return activity.categoryId === categoryFilter
   })
-  const openVisible = openActivities(visible)
+  const openVisible = sortActivitiesByDateAscending(
+    openActivities(visible),
+    store.tasks,
+  )
   const logEntries = projectLogEntries(visible, store.tasks)
 
   if (!project) {
