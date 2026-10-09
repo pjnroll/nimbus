@@ -13,6 +13,7 @@ export async function proxy(request: NextRequest) {
   const isApi = pathname.startsWith("/api/")
   const isPublic =
     pathname.startsWith("/login") ||
+    pathname === "/privacy" ||
     pathname.startsWith("/api/auth/") ||
     pathname === "/api/demo"
 

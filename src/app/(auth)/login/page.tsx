@@ -144,6 +144,11 @@ function LoginCard() {
             Dati di esempio, sola lettura. Nessun account richiesto.
           </p>
         </div>
+        <p className="text-center text-xs text-muted-foreground">
+          <a href="/privacy" className="underline underline-offset-4">
+            Privacy
+          </a>
+        </p>
       </CardContent>
     </Card>
   )
