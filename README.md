@@ -17,7 +17,9 @@ Ogni persona entra con **Google**. Il primo accesso crea la scrivania; gli accou
 Node.js 20 o successivo. Serve un client OAuth Google (tipo **Applicazione Web**) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
 
 - Origini JavaScript autorizzate: `http://127.0.0.1:43123`
-- URI di reindirizzamento autorizzati: `http://127.0.0.1:43123/api/auth/google/callback`
+- URI di reindirizzamento autorizzati: `http://127.0.0.1:43123/api/auth/google/callback` e `http://127.0.0.1:43123/api/calendar/google/callback`
+
+Per **Importa call** sull’agenda abilita la Google Calendar API sullo stesso progetto e aggiungi lo scope `https://www.googleapis.com/auth/calendar.events.readonly` alla schermata di consenso. Il login resta solo identità; il Calendario si autorizza a parte, in sola lettura.
 
 Finché l’app OAuth non è verificata, Google la limita ai tester che aggiungi alla schermata di consenso.
 
@@ -102,7 +104,7 @@ GOOGLE_CLIENT_ID=....apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
 ```
 
-Nel client OAuth di produzione: origine e redirect `https://nimbus.example.com` e `https://nimbus.example.com/api/auth/google/callback`.
+Nel client OAuth di produzione: origine `https://nimbus.example.com` e redirect `https://nimbus.example.com/api/auth/google/callback` e `https://nimbus.example.com/api/calendar/google/callback`.
 
 `NIMBUS_DATA_PATH` è ancora letto: la cartella del file diventa `dataDir`.
 

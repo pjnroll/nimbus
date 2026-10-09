@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { ActivityDialog } from "@/components/activity-dialog"
+import { ImportMeetDialog } from "@/components/import-meet-dialog"
 import { ActivityList } from "@/components/activity-list"
 import { AgendaCalendar } from "@/components/agenda-calendar"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ import {
   todayISO,
   type HomeRange,
 } from "@/lib/dates"
+import type { MeetCall } from "@/lib/meet-events"
 import { sortActivitiesByTaskStartsAt, tasksByDay } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import {
@@ -31,6 +33,29 @@ const RANGE_TABS: { id: HomeRange; label: string }[] = [
   { id: "settimana", label: "Settimana" },
 ]
 
+function localTaskSlot(iso: string): string | null {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return null
+  const pad = (value: number) => String(value).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function startCalendarConsent() {
+  const link = document.createElement("a")
+  link.href = "/api/calendar/google"
+  document.body.append(link)
+  link.click()
+  link.remove()
+}
+
+function meetWindow(): { timeMin: string; timeMax: string } {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 15)
+  return { timeMin: start.toISOString(), timeMax: end.toISOString() }
+}
+
 function subtitleForRange(range: HomeRange): string {
   const hello = greetingForNow()
   if (range === "mese") {
@@ -40,9 +65,13 @@ function subtitleForRange(range: HomeRange): string {
 }
 
 export default function AgendaPage() {
-  const { store, updateActivity, deleteActivity } = useNimbus()
+  const { store, updateActivity, deleteActivity, addActivity, upsertTask, readOnly } =
+    useNimbus()
   const [selected, setSelected] = useState<Activity | null>(null)
   const [creating, setCreating] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [meetEvents, setMeetEvents] = useState<MeetCall[]>([])
+  const [meetBusy, setMeetBusy] = useState(false)
   const [range, setRange] = useState<HomeRange>("mese")
   const today = todayISO()
   const [month, setMonth] = useState(today)
@@ -90,6 +119,111 @@ export default function AgendaPage() {
     setWeek(today)
   }
 
+  const openImport = useCallback(async () => {
+    if (readOnly) return
+    setMeetBusy(true)
+    try {
+      const { timeMin, timeMax } = meetWindow()
+      const response = await fetch(
+        `/api/calendar/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`,
+      )
+      if (response.status === 401) {
+        const body = (await response.json().catch(() => null)) as {
+          needsAuth?: boolean
+        } | null
+        if (body?.needsAuth) {
+          startCalendarConsent()
+          return
+        }
+        toast.error("Accedi per importare le call")
+        return
+      }
+      if (!response.ok) {
+        toast.error("Non riesco a leggere il Calendario")
+        return
+      }
+      const body = (await response.json()) as { events?: MeetCall[] }
+      setMeetEvents(Array.isArray(body.events) ? body.events : [])
+      setImportOpen(true)
+    } catch {
+      toast.error("Non riesco a leggere il Calendario")
+    } finally {
+      setMeetBusy(false)
+    }
+  }, [readOnly])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const flag = params.get("import")
+    if (!flag) return
+    params.delete("import")
+    const query = params.toString()
+    window.history.replaceState(null, "", query ? `/?${query}` : "/")
+    if (flag === "denied") {
+      toast.message("Accesso al Calendario annullato")
+      return
+    }
+    if (flag === "error") {
+      toast.error("Non riesco a collegare il Calendario")
+      return
+    }
+    if (flag !== "meet") return
+    const timer = window.setTimeout(() => {
+      void openImport()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [openImport])
+
+  function importCalls(calls: MeetCall[]) {
+    if (readOnly) return
+    let imported = 0
+    let earliest = ""
+    for (const call of calls) {
+      const startsAt = localTaskSlot(call.startsAt)
+      if (!startsAt) continue
+      const endSlot = call.endsAt ? localTaskSlot(call.endsAt) : null
+      const activity = addActivity({
+        title: call.title,
+        description: call.meetUrl,
+        projectId: null,
+        source: "altro",
+        requesterId: null,
+        responsibleId: null,
+        participantIds: [],
+        reminderOn: null,
+        status: "in_corso",
+        priority: "media",
+        waitingOnPersonId: null,
+        waitingReason: "",
+        closingNote: "",
+        driveUrl: "",
+        attachments: [],
+        categoryId: null,
+        calendarEventId: call.id,
+      })
+      upsertTask({
+        activityId: activity.id,
+        startsAt,
+        endsAt: endSlot && endSlot > startsAt ? endSlot : null,
+        executorIds: [],
+        notes: "",
+      })
+      imported += 1
+      if (!earliest || startsAt < earliest) earliest = startsAt
+    }
+    if (earliest) {
+      setSelectedDay(earliest.slice(0, 10))
+      setMonth(earliest.slice(0, 10))
+      setWeek(earliest.slice(0, 10))
+    }
+    if (imported > 0) {
+      toast.success(
+        imported === 1 ? "1 call importata" : `${imported} call importate`,
+      )
+    }
+    setImportOpen(false)
+  }
+
   async function copyDay(day: string) {
     const text = formatTasksExportForDay(store, day)
     if (!text) {
@@ -118,7 +252,16 @@ export default function AgendaPage() {
             {subtitleForRange(range)}
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>Nuova attività</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={readOnly || meetBusy}
+            onClick={() => void openImport()}
+          >
+            Importa call
+          </Button>
+          <Button onClick={() => setCreating(true)}>Nuova attività</Button>
+        </div>
       </header>
       <div className="surface-panel flex min-w-0 flex-wrap items-center gap-3 p-3">
         <Tabs
@@ -206,6 +349,12 @@ export default function AgendaPage() {
             />
           </aside>
       </div>
+      <ImportMeetDialog
+        open={importOpen}
+        events={meetEvents}
+        onOpenChange={setImportOpen}
+        onImport={importCalls}
+      />
       <ActivityDialog
         open={Boolean(selected)}
         onOpenChange={(open) => {

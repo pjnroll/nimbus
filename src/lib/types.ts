@@ -77,6 +77,7 @@ export type Activity = {
   driveUrl: string
   attachments: ActivityAttachment[]
   categoryId: string | null
+  calendarEventId: string | null
   createdAt: string
   updatedAt: string
 }

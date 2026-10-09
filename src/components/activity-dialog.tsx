@@ -366,7 +366,11 @@ function ActivityDialogForm({
         onOpenChange(false)
         return
       }
-      const created = addActivity({ ...payload, attachments: [] })
+      const created = addActivity({
+        ...payload,
+        attachments: [],
+        calendarEventId: null,
+      })
       applyTask(created.id)
       if (pendingFiles.length > 0) {
         await uploadActivityFiles(created.id, pendingFiles)

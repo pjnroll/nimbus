@@ -306,6 +306,13 @@ function text(value: unknown, max: number): string {
   return typeof value === "string" ? value.slice(0, max) : ""
 }
 
+function calendarEventId(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const id = value.trim()
+  if (!id || id.length > MAX_SHORT_TEXT) return null
+  return id
+}
+
 function coerceAttachments(value: unknown): Activity["attachments"] {
   if (!Array.isArray(value)) return []
   const attachments: Activity["attachments"] = []
@@ -459,6 +466,7 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
     driveUrl: safeHttpUrl(text(raw.driveUrl, MAX_LONG_TEXT)),
     attachments: coerceAttachments(raw.attachments),
     categoryId: typeof raw.categoryId === "string" ? raw.categoryId : null,
+    calendarEventId: calendarEventId(raw.calendarEventId),
     createdAt: typeof raw.createdAt === "string" ? raw.createdAt : nowISO(),
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : nowISO(),
   }

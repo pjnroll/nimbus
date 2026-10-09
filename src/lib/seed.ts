@@ -115,7 +115,10 @@ const projects: Project[] = [
   },
 ]
 
-type SeedActivity = Omit<Activity, "responsibleId" | "participantIds" | "reminderOn"> &
+type SeedActivity = Omit<
+  Activity,
+  "responsibleId" | "participantIds" | "reminderOn" | "calendarEventId"
+> &
   Partial<Pick<Activity, "responsibleId" | "participantIds" | "reminderOn">>
 
 function completeActivity(activity: SeedActivity): Activity {
@@ -124,6 +127,7 @@ function completeActivity(activity: SeedActivity): Activity {
     responsibleId: activity.responsibleId ?? "ppl-tu",
     participantIds: activity.participantIds ?? [],
     reminderOn: activity.reminderOn ?? null,
+    calendarEventId: null,
   }
 }
 
