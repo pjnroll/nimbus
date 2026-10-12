@@ -16,10 +16,7 @@ import { Button } from "@/components/ui/button"
 import { PROJECT_STATUS_LABELS } from "@/lib/labels"
 import { personName, personNames } from "@/lib/people"
 import { projectLogEntries } from "@/lib/project-log"
-import {
-  openActivities,
-  sortActivitiesByDateAscending,
-} from "@/lib/selectors"
+import { openActivities, sortActivities } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import { NONE_CATEGORY, type Activity } from "@/lib/types"
 import { safeHttpUrl } from "@/lib/urls"
@@ -70,7 +67,7 @@ export default function ProjectDetailPage({
     if (categoryFilter === NONE_CATEGORY) return !activity.categoryId
     return activity.categoryId === categoryFilter
   })
-  const openVisible = sortActivitiesByDateAscending(
+  const openVisible = sortActivities(
     openActivities(visible),
     store.tasks,
   )

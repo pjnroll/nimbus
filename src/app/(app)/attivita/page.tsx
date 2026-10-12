@@ -10,11 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { STATUS_LABELS } from "@/lib/labels"
-import {
-  overdueActivities,
-  sortActivitiesByScheduleAscending,
-  sortByTaskThenPriority,
-} from "@/lib/selectors"
+import { overdueActivities, sortActivities } from "@/lib/selectors"
 import { activityCategoryName } from "@/lib/categories"
 import { activityPersonHaystack } from "@/lib/people"
 import { useNimbus } from "@/lib/store"
@@ -100,11 +96,11 @@ export default function AttivitaPage() {
         .toLowerCase()
       return haystack.includes(needle)
     })
-    const open = sortActivitiesByScheduleAscending(
+    const open = sortActivities(
       list.filter((activity) => !closedActivity(activity.status)),
       store.tasks,
     )
-    const closed = sortByTaskThenPriority(
+    const closed = sortActivities(
       list.filter((activity) => closedActivity(activity.status)),
       store.tasks,
     )

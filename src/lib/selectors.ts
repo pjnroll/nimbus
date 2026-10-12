@@ -91,42 +91,48 @@ export function sortActivitiesByTaskStartsAt(
   })
 }
 
-/** Earliest date first: task start, otherwise the due date. Undated activities stay at the end. */
-export function sortActivitiesByDateAscending(
-  activities: Activity[],
-  tasks: Task[],
-): Activity[] {
-  function key(activity: Activity): string {
-    const start = taskByActivityId(tasks, activity.id)?.startsAt ?? ""
-    if (start) return start
-    return activity.reminderOn ?? ""
-  }
-  return [...activities].sort((a, b) => {
-    const keyA = key(a)
-    const keyB = key(b)
-    if (keyA && keyB && keyA !== keyB) return keyA.localeCompare(keyB)
-    if (keyA && !keyB) return -1
-    if (!keyA && keyB) return 1
-    return a.title.localeCompare(b.title, "it")
-  })
+function comparePresentAscending(a: string, b: string): number {
+  if (a && b && a !== b) return a.localeCompare(b)
+  if (a && !b) return -1
+  if (!a && b) return 1
+  return 0
 }
 
-/** Earliest planned start first, including time. Activities without a task stay at the end. */
-export function sortActivitiesByScheduleAscending(
+/** Task start, then due date, then priority from alta to bassa. */
+export function sortActivities(
   activities: Activity[],
   tasks: Task[],
 ): Activity[] {
   const priorityRank = { alta: 0, media: 1, bassa: 2 }
   return [...activities].sort((a, b) => {
-    const startA = taskByActivityId(tasks, a.id)?.startsAt ?? ""
-    const startB = taskByActivityId(tasks, b.id)?.startsAt ?? ""
-    if (startA && startB && startA !== startB) return startA.localeCompare(startB)
-    if (startA && !startB) return -1
-    if (!startA && startB) return 1
+    const byStart = comparePresentAscending(
+      taskByActivityId(tasks, a.id)?.startsAt ?? "",
+      taskByActivityId(tasks, b.id)?.startsAt ?? "",
+    )
+    if (byStart !== 0) return byStart
+    const byReminder = comparePresentAscending(
+      a.reminderOn ?? "",
+      b.reminderOn ?? "",
+    )
+    if (byReminder !== 0) return byReminder
     const byPriority = priorityRank[a.priority] - priorityRank[b.priority]
     if (byPriority !== 0) return byPriority
     return a.title.localeCompare(b.title, "it")
   })
+}
+
+export function sortActivitiesByDateAscending(
+  activities: Activity[],
+  tasks: Task[],
+): Activity[] {
+  return sortActivities(activities, tasks)
+}
+
+export function sortActivitiesByScheduleAscending(
+  activities: Activity[],
+  tasks: Task[],
+): Activity[] {
+  return sortActivities(activities, tasks)
 }
 
 /** Planned tasks grouped by local calendar day (open, fatto, fallita; not inbox). */
@@ -234,17 +240,7 @@ export function sortByTaskThenPriority(
   activities: Activity[],
   tasks: Task[],
 ): Activity[] {
-  const priorityRank = { alta: 0, media: 1, bassa: 2 }
-  return [...activities].sort((a, b) => {
-    const taskA = taskByActivityId(tasks, a.id)
-    const taskB = taskByActivityId(tasks, b.id)
-    const dueA = taskA ? taskDate(taskA.startsAt) : null
-    const dueB = taskB ? taskDate(taskB.startsAt) : null
-    if (dueA && dueB && dueA !== dueB) return dueA.localeCompare(dueB)
-    if (dueA && !dueB) return -1
-    if (!dueA && dueB) return 1
-    return priorityRank[a.priority] - priorityRank[b.priority]
-  })
+  return sortActivities(activities, tasks)
 }
 
 /** @deprecated use sortByTaskThenPriority */
