@@ -21,13 +21,11 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { reminderStartsAt } from "@/lib/dates"
 import { normalizeEmail } from "@/lib/email"
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/labels"
 import { useNimbus } from "@/lib/store"
-import {
-  buildGoogleCalendarAllDayUrl,
-  buildGoogleCalendarEventUrl,
-} from "@/lib/google-calendar"
+import { buildGoogleCalendarEventUrl } from "@/lib/google-calendar"
 import { personName, personNames, calendarGuestEmails } from "@/lib/people"
 import { safeHttpUrl } from "@/lib/urls"
 import {
@@ -89,6 +87,7 @@ type FormState = {
   responsibleId: string | null
   participantIds: string[]
   reminderOn: string
+  reminderTime: string
   status: ActivityStatus
   priority: Priority
   waitingOnPersonId: string | null
@@ -113,6 +112,7 @@ const emptyForm = (defaults?: Partial<FormState>): FormState => ({
   responsibleId: null,
   participantIds: [],
   reminderOn: "",
+  reminderTime: "",
   status: "in_attesa",
   priority: "media",
   waitingOnPersonId: null,
@@ -143,7 +143,8 @@ function fromActivity(
     requesterId: activity.requesterId,
     responsibleId: activity.responsibleId,
     participantIds: activity.participantIds,
-    reminderOn: activity.reminderOn ?? "",
+    reminderOn: reminderStartsAt(activity.reminderOn)?.slice(0, 10) ?? "",
+    reminderTime: reminderStartsAt(activity.reminderOn)?.slice(11, 16) ?? "",
     status,
     priority: activity.priority,
     waitingOnPersonId: activity.waitingOnPersonId,
@@ -348,7 +349,9 @@ function ActivityDialogForm({
       requesterId: form.requesterId,
       responsibleId: form.responsibleId,
       participantIds: form.participantIds,
-      reminderOn: form.reminderOn.trim() || null,
+      reminderOn: form.reminderOn.trim()
+        ? buildStartsAt(form.reminderOn.trim(), form.reminderTime.trim() || "09:00")
+        : null,
       status: form.status === "inbox" ? "in_attesa" : form.status,
       priority: form.priority,
       waitingOnPersonId: form.waitingOnPersonId,
@@ -473,16 +476,27 @@ function ActivityDialogForm({
 
   const reminderCalendarUrl = useMemo(() => {
     if (!form.reminderOn) return null
+    const startsAt = buildStartsAt(
+      form.reminderOn,
+      form.reminderTime.trim() || "09:00",
+    )
     const detailsLines = [...calendarDetails]
     if (form.driveUrl.trim()) {
       detailsLines.push(`Drive: ${form.driveUrl.trim()}`)
     }
-    return buildGoogleCalendarAllDayUrl({
+    return buildGoogleCalendarEventUrl({
       title: eventTitle,
-      dateISO: form.reminderOn,
+      startsAt,
+      endsAt: null,
       detailsLines,
     })
-  }, [form.reminderOn, form.driveUrl, calendarDetails, eventTitle])
+  }, [
+    form.reminderOn,
+    form.reminderTime,
+    form.driveUrl,
+    calendarDetails,
+    eventTitle,
+  ])
   const savedAttachments = activity
     ? (store.activities.find((item) => item.id === activity.id)?.attachments ??
       activity.attachments)
@@ -642,32 +656,37 @@ function ActivityDialogForm({
                 />
               </FormField>
             ) : null}
-            <FormField label="Scadenza / reminder" htmlFor="act-reminder">
-              <Input
-                id="act-reminder"
-                type="date"
-                value={form.reminderOn}
-                onChange={(event) => patch("reminderOn", event.target.value)}
-                className="min-w-[12rem] w-auto"
-              />
+            <FormField label="Promemoria" htmlFor="act-reminder">
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  id="act-reminder"
+                  type="date"
+                  value={form.reminderOn}
+                  onChange={(event) => patch("reminderOn", event.target.value)}
+                  className="min-w-[12rem] w-auto"
+                />
+                <Input
+                  type="time"
+                  aria-label="Ora del promemoria"
+                  value={form.reminderTime}
+                  onChange={(event) => patch("reminderTime", event.target.value)}
+                  className="w-auto"
+                  disabled={!form.reminderOn}
+                />
+              </div>
               {form.reminderOn && reminderCalendarUrl ? (
-                <div className="grid gap-1.5">
-                  <a
-                    href={reminderCalendarUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      buttonVariants({ variant: "outline" }),
-                      "w-full justify-center sm:w-auto",
-                    )}
-                  >
-                    <CalendarIcon />
-                    Aggiungi al calendario
-                  </a>
-                  <p className="text-xs text-muted-foreground">
-                    Evento giornaliero sulla data di scadenza.
-                  </p>
-                </div>
+                <a
+                  href={reminderCalendarUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    buttonVariants({ variant: "outline" }),
+                    "w-full justify-center sm:w-auto",
+                  )}
+                >
+                  <CalendarIcon />
+                  Aggiungi al calendario
+                </a>
               ) : null}
             </FormField>
           </FormSection>

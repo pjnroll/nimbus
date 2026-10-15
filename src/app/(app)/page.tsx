@@ -14,12 +14,13 @@ import {
   greetingForNow,
   homeRangeBounds,
   isHomeRange,
+  reminderStartsAt,
   startOfMonth,
   todayISO,
   type HomeRange,
 } from "@/lib/dates"
 import type { MeetCall } from "@/lib/meet-events"
-import { sortActivitiesByTaskStartsAt, tasksByDay } from "@/lib/selectors"
+import { tasksByDay } from "@/lib/selectors"
 import { useNimbus } from "@/lib/store"
 import {
   copyTextToClipboard,
@@ -87,12 +88,27 @@ export default function AgendaPage() {
 
   const selectedDayActivities = useMemo(() => {
     const dayTasks = calendarTasks.get(selectedDay) ?? []
-    const activities = dayTasks
+    const fromTasks = dayTasks
       .map((task) =>
         store.activities.find((activity) => activity.id === task.activityId),
       )
       .filter((activity): activity is Activity => Boolean(activity))
-    return sortActivitiesByTaskStartsAt(activities, store.tasks)
+    const shown = new Set(fromTasks.map((activity) => activity.id))
+    const reminders = store.activities.filter((activity) => {
+      if (activity.status === "inbox" || shown.has(activity.id)) return false
+      const start = reminderStartsAt(activity.reminderOn)
+      return start?.slice(0, 10) === selectedDay
+    })
+    return [...fromTasks, ...reminders].sort((a, b) => {
+      const slot = (activity: Activity) => {
+        const task = taskByActivityId(store.tasks, activity.id)
+        if (task && taskDate(task.startsAt) === selectedDay) return task.startsAt
+        return reminderStartsAt(activity.reminderOn) ?? ""
+      }
+      const byTime = slot(a).localeCompare(slot(b))
+      if (byTime !== 0) return byTime
+      return a.title.localeCompare(b.title, "it")
+    })
   }, [calendarTasks, selectedDay, store.activities, store.tasks])
 
   function onStatus(
@@ -305,9 +321,8 @@ export default function AgendaPage() {
               setSelected(null)
               setCreating(true)
             }}
-            onOpenActivity={(activity) => {
-              const task = taskByActivityId(store.tasks, activity.id)
-              if (task) selectCalendarDay(taskDate(task.startsAt))
+            onOpenActivity={(activity, day) => {
+              selectCalendarDay(day)
               setSelected(activity)
             }}
           />
@@ -321,8 +336,8 @@ export default function AgendaPage() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {selectedDayActivities.length === 1
-                    ? "1 task"
-                    : `${selectedDayActivities.length} task`}
+                    ? "1 attività"
+                    : `${selectedDayActivities.length} attività`}
                 </p>
               </div>
               <Button

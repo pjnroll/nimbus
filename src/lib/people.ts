@@ -1,4 +1,4 @@
-import { isISODate, nowISO } from "@/lib/dates"
+import { isISODate, nowISO, reminderStartsAt } from "@/lib/dates"
 import { isValidEmail, normalizeEmail } from "@/lib/email"
 import { coerceProjectColor } from "@/lib/project-color"
 import { safeHttpUrl } from "@/lib/urls"
@@ -447,7 +447,9 @@ function normalizeActivity(raw: Record<string, unknown>): Activity {
     requesterId,
     responsibleId,
     participantIds: uniqueStringIds(raw.participantIds),
-    reminderOn: isISODate(raw.reminderOn) ? raw.reminderOn : null,
+    reminderOn: reminderStartsAt(
+      typeof raw.reminderOn === "string" ? raw.reminderOn : null,
+    ),
     status:
       raw.status === "inbox"
         ? "in_attesa"

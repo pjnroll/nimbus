@@ -123,10 +123,25 @@ export function parseISODate(iso: string): Date {
 
 export function formatDateIT(iso: string | null): string {
   if (!iso) return "Senza scadenza"
-  return parseISODate(iso).toLocaleDateString("it-IT", {
+  return parseISODate(iso.slice(0, 10)).toLocaleDateString("it-IT", {
     day: "numeric",
     month: "short",
   })
+}
+
+/** Local reminder slot. A date without a time is 09:00 that day. */
+export function reminderStartsAt(value: string | null | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return `${trimmed}T09:00`
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trimmed)) return trimmed.slice(0, 16)
+  return null
+}
+
+export function formatReminderIT(value: string | null | undefined): string {
+  const startsAt = reminderStartsAt(value)
+  if (!startsAt) return ""
+  return `${formatDateIT(startsAt)} · ${startsAt.slice(11, 16)}`
 }
 
 export function formatLongDateIT(iso: string): string {

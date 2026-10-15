@@ -10,6 +10,7 @@ import {
   formatRangeIT,
   monthGridDays,
   parseISODate,
+  reminderStartsAt,
   startOfMonth,
   startOfWeekMonday,
   todayISO,
@@ -56,7 +57,7 @@ export function AgendaCalendar({
   onAnchorChange: (iso: string) => void
   onSelectDay: (iso: string) => void
   onFocusToday: () => void
-  onOpenActivity: (activity: Activity) => void
+  onOpenActivity: (activity: Activity, day: string) => void
   onCreateActivity: (iso: string) => void
 }) {
   const week = view === "settimana"
@@ -128,7 +129,45 @@ export function AgendaCalendar({
             const isToday = iso === today
             const isSelected = iso === selectedDay
             const dayTasks = tasksByDay.get(iso) ?? []
-            const extra = dayTasks.length - MAX_TITLES
+            const shown = new Set(dayTasks.map((task) => task.activityId))
+            const items = [
+              ...dayTasks.flatMap((task) => {
+                const activity = activityById.get(task.activityId)
+                if (!activity) return []
+                return [
+                  {
+                    key: task.id,
+                    activity,
+                    time: slotLabel(task),
+                    overdue:
+                      !closedActivity(activity.status) &&
+                      isTaskOverdue(task, today),
+                    sort: task.startsAt,
+                  },
+                ]
+              }),
+              ...activities.flatMap((activity) => {
+                if (activity.status === "inbox" || shown.has(activity.id)) {
+                  return []
+                }
+                const start = reminderStartsAt(activity.reminderOn)
+                if (!start || start.slice(0, 10) !== iso) return []
+                return [
+                  {
+                    key: `reminder-${activity.id}`,
+                    activity,
+                    time: start.slice(11, 16),
+                    overdue: false,
+                    sort: start,
+                  },
+                ]
+              }),
+            ].sort(
+              (a, b) =>
+                a.sort.localeCompare(b.sort) ||
+                a.activity.title.localeCompare(b.activity.title, "it"),
+            )
+            const extra = items.length - MAX_TITLES
             const dayNumber = parseISODate(iso).getDate()
             return (
               <div
@@ -168,30 +207,25 @@ export function AgendaCalendar({
                   {dayNumber}
                 </div>
                 <ul className="relative z-10 mt-1 space-y-0.5">
-                  {dayTasks.slice(0, MAX_TITLES).map((task) => {
-                    const activity = activityById.get(task.activityId)
-                    if (!activity) return null
-                    const project = activity.projectId
-                      ? projectById.get(activity.projectId)
+                  {items.slice(0, MAX_TITLES).map((item) => {
+                    const project = item.activity.projectId
+                      ? projectById.get(item.activity.projectId)
                       : undefined
-                    const overdue =
-                      !closedActivity(activity.status) &&
-                      isTaskOverdue(task, today)
-                    const time = slotLabel(task)
                     return (
-                      <li key={task.id}>
+                      <li key={item.key}>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation()
-                            onOpenActivity(activity)
+                            onOpenActivity(item.activity, iso)
                           }}
                           className={cn(
                             "flex w-full min-w-0 items-center gap-1 rounded px-0.5 py-0.5 text-left text-[11px] leading-tight hover:bg-muted/80",
-                            closedActivity(activity.status) && "line-through",
-                            activity.status === "fatto" && "text-muted-foreground",
-                            activity.status === "fallita" && "text-red-700/80",
-                            overdue && "text-red-700",
+                            closedActivity(item.activity.status) && "line-through",
+                            item.activity.status === "fatto" &&
+                              "text-muted-foreground",
+                            item.activity.status === "fallita" && "text-red-700/80",
+                            item.overdue && "text-red-700",
                           )}
                         >
                           <span
@@ -201,10 +235,12 @@ export function AgendaCalendar({
                             )}
                             aria-hidden
                           />
-                          {time ? (
-                            <span className="shrink-0 tabular-nums">{time}</span>
+                          {item.time ? (
+                            <span className="shrink-0 tabular-nums">{item.time}</span>
                           ) : null}
-                          <span className="min-w-0 truncate">{activity.title}</span>
+                          <span className="min-w-0 truncate">
+                            {item.activity.title}
+                          </span>
                         </button>
                       </li>
                     )

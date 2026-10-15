@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CategoryBadge, PriorityBadge, StatusBadge } from "@/components/status-badges"
-import { formatDateIT, todayISO } from "@/lib/dates"
+import { formatReminderIT, todayISO } from "@/lib/dates"
 import { categoryName } from "@/lib/categories"
 import { personName, personNames } from "@/lib/people"
 import { projectBorderClass } from "@/lib/project-color"
@@ -138,9 +138,9 @@ export function ActivityCard({
               {!dense && taskPeople ? ` · Esecutori · ${taskPeople}` : ""}
             </p>
           ) : null}
-          {!dense && !task && activity.reminderOn ? (
+          {!dense && activity.reminderOn ? (
             <p className="mt-1 text-sm font-medium text-foreground">
-              Scadenza · {formatDateIT(activity.reminderOn)}
+              Promemoria · {formatReminderIT(activity.reminderOn)}
             </p>
           ) : null}
           {!dense && waitingName ? (
@@ -244,9 +244,9 @@ export function ActivityCard({
                 {taskPeople ? ` · Esecutori · ${taskPeople}` : ""}
               </p>
             ) : null}
-            {!task && activity.reminderOn ? (
+            {activity.reminderOn ? (
               <p className="mb-1 text-xs font-medium text-foreground">
-                Scadenza · {formatDateIT(activity.reminderOn)}
+                Promemoria · {formatReminderIT(activity.reminderOn)}
               </p>
             ) : null}
             <p className="line-clamp-3 text-sm text-muted-foreground">
