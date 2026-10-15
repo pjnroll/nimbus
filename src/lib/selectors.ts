@@ -7,7 +7,7 @@ import {
   taskByActivityId,
   taskDate,
 } from "@/lib/tasks"
-import { todayISO } from "@/lib/dates"
+import { reminderStartsAt, todayISO } from "@/lib/dates"
 
 export { openActivities }
 
@@ -98,23 +98,26 @@ function comparePresentAscending(a: string, b: string): number {
   return 0
 }
 
-/** Task start, then due date, then priority from alta to bassa. */
+/** Earliest of task start and reminder. A date without a time is 09:00. */
+function scheduleAt(activity: Activity, tasks: Task[]): string {
+  const taskStart = taskByActivityId(tasks, activity.id)?.startsAt ?? ""
+  const reminder = reminderStartsAt(activity.reminderOn) ?? ""
+  if (taskStart && reminder) return taskStart < reminder ? taskStart : reminder
+  return taskStart || reminder
+}
+
+/** Date and time ascending, then priority from alta to bassa. Undated last. */
 export function sortActivities(
   activities: Activity[],
   tasks: Task[],
 ): Activity[] {
   const priorityRank = { alta: 0, media: 1, bassa: 2 }
   return [...activities].sort((a, b) => {
-    const byStart = comparePresentAscending(
-      taskByActivityId(tasks, a.id)?.startsAt ?? "",
-      taskByActivityId(tasks, b.id)?.startsAt ?? "",
+    const byWhen = comparePresentAscending(
+      scheduleAt(a, tasks),
+      scheduleAt(b, tasks),
     )
-    if (byStart !== 0) return byStart
-    const byReminder = comparePresentAscending(
-      a.reminderOn ?? "",
-      b.reminderOn ?? "",
-    )
-    if (byReminder !== 0) return byReminder
+    if (byWhen !== 0) return byWhen
     const byPriority = priorityRank[a.priority] - priorityRank[b.priority]
     if (byPriority !== 0) return byPriority
     return a.title.localeCompare(b.title, "it")
