@@ -487,7 +487,7 @@ function ActivityDialogForm({
     return buildGoogleCalendarEventUrl({
       title: eventTitle,
       startsAt,
-      endsAt: null,
+      endsAt: startsAt,
       detailsLines,
     })
   }, [
@@ -680,8 +680,8 @@ function ActivityDialogForm({
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    buttonVariants({ variant: "outline" }),
-                    "w-full justify-center sm:w-auto",
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "w-fit",
                   )}
                 >
                   <CalendarIcon />
