@@ -1,10 +1,12 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { CloudIcon, CompassIcon } from "lucide-react"
-import { Suspense, useEffect, useState } from "react"
+import { CloudIcon, CompassIcon, LogInIcon } from "lucide-react"
+import { Suspense, useEffect, useState, type FormEvent } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Card,
   CardContent,
@@ -49,9 +51,83 @@ function GoogleMark() {
   )
 }
 
+function Divider() {
+  return (
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <span className="h-px flex-1 bg-border" />
+      oppure
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  )
+}
+
+function PasswordForm({ next }: { next: string }) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy(true)
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, next }),
+      })
+      const payload = (await response.json().catch(() => null)) as {
+        next?: string
+        error?: string
+      } | null
+      if (!response.ok) {
+        toast.error(payload?.error ?? "Accesso non riuscito.")
+        setPassword("")
+        return
+      }
+      window.location.assign(safeNextPath(payload?.next))
+    } catch {
+      toast.error("Accesso non riuscito.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className="grid gap-3" onSubmit={(event) => void onSubmit(event)}>
+      <div className="grid gap-1.5">
+        <Label htmlFor="login-email">Email</Label>
+        <Input
+          id="login-email"
+          type="email"
+          autoComplete="username"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="login-password">Password</Label>
+        <Input
+          id="login-password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+      </div>
+      <Button type="submit" className="w-full" size="lg" disabled={busy}>
+        <LogInIcon />
+        Accedi
+      </Button>
+    </form>
+  )
+}
+
 function LoginCard() {
   const searchParams = useSearchParams()
   const [allowRegister, setAllowRegister] = useState(true)
+  const [google, setGoogle] = useState(false)
   const [originBlocked, setOriginBlocked] = useState(false)
   const next = safeNextPath(searchParams.get("next"))
   const href =
@@ -74,12 +150,12 @@ function LoginCard() {
     void fetch("/api/auth/config")
       .then((response) => response.json())
       .then((payload: unknown) => {
-        if (
-          payload &&
-          typeof payload === "object" &&
-          "allowRegister" in payload
-        ) {
+        if (!payload || typeof payload !== "object") return
+        if ("allowRegister" in payload) {
           setAllowRegister(Boolean(payload.allowRegister))
+        }
+        if ("google" in payload) {
+          setGoogle(Boolean(payload.google))
         }
       })
       .catch(() => undefined)
@@ -100,35 +176,39 @@ function LoginCard() {
           Accedi
         </CardTitle>
         <CardDescription>
-          Benvenuto. Accedi con Google per continuare.
+          Benvenuto. Accedi con email e password per continuare.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-        {originBlocked ? (
-          <p className="text-sm text-muted-foreground">{LOGIN_ERRORS.origin}</p>
-        ) : (
-          <Button
-            nativeButton={false}
-            render={<a href={href} />}
-            variant="outline"
-            className="w-full"
-            size="lg"
-          >
-            <GoogleMark />
-            Continua con Google
-          </Button>
-        )}
-        {allowRegister ? null : (
-          <p className="text-sm text-muted-foreground">
-            I nuovi account non sono accettati. Accedi con un Google già
-            registrato.
-          </p>
-        )}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          oppure
-          <span className="h-px flex-1 bg-border" />
-        </div>
+        <PasswordForm next={next} />
+        {google ? (
+          <>
+            <Divider />
+            {originBlocked ? (
+              <p className="text-sm text-muted-foreground">
+                {LOGIN_ERRORS.origin}
+              </p>
+            ) : (
+              <Button
+                nativeButton={false}
+                render={<a href={href} />}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                <GoogleMark />
+                Continua con Google
+              </Button>
+            )}
+            {allowRegister ? null : (
+              <p className="text-sm text-muted-foreground">
+                I nuovi account non sono accettati. Accedi con un Google già
+                registrato.
+              </p>
+            )}
+          </>
+        ) : null}
+        <Divider />
         <div className="grid gap-1.5">
           <Button
             nativeButton={false}

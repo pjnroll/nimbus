@@ -73,6 +73,7 @@ export default function AgendaPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [meetEvents, setMeetEvents] = useState<MeetCall[]>([])
   const [meetBusy, setMeetBusy] = useState(false)
+  const [calendarEnabled, setCalendarEnabled] = useState(false)
   const [range, setRange] = useState<HomeRange>("mese")
   const today = todayISO()
   const [month, setMonth] = useState(today)
@@ -167,6 +168,17 @@ export default function AgendaPage() {
       setMeetBusy(false)
     }
   }, [readOnly])
+
+  useEffect(() => {
+    void fetch("/api/auth/config")
+      .then((response) => response.json())
+      .then((payload: unknown) => {
+        if (payload && typeof payload === "object" && "google" in payload) {
+          setCalendarEnabled(Boolean(payload.google))
+        }
+      })
+      .catch(() => undefined)
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -269,13 +281,15 @@ export default function AgendaPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            disabled={readOnly || meetBusy}
-            onClick={() => void openImport()}
-          >
-            Importa call
-          </Button>
+          {calendarEnabled ? (
+            <Button
+              variant="outline"
+              disabled={readOnly || meetBusy}
+              onClick={() => void openImport()}
+            >
+              Importa call
+            </Button>
+          ) : null}
           <Button onClick={() => setCreating(true)}>Nuova attività</Button>
         </div>
       </header>

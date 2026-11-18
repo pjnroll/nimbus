@@ -5,6 +5,7 @@ import {
   oauthStateCookieOptions,
   type GoogleCredentials,
 } from "@/lib/auth/google"
+import { secureCookies } from "@/lib/auth/token"
 
 export const CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.events.readonly"
@@ -21,7 +22,7 @@ export function calendarAccessCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies(),
     path: "/",
     maxAge: CALENDAR_ACCESS_MAX_AGE,
   }

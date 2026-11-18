@@ -66,11 +66,16 @@ export async function readSessionToken(
   }
 }
 
+/** Secure cookies are dropped by browsers on plain HTTP to a LAN or Tailscale IP. */
+export function secureCookies(): boolean {
+  return /^https:\/\//i.test(process.env.NIMBUS_APP_URL?.trim() ?? "")
+}
+
 export function sessionCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies(),
     path: "/",
     maxAge: SESSION_MAX_AGE,
   }

@@ -1,6 +1,9 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
-import { CALENDAR_ACCESS_COOKIE } from "@/lib/auth/calendar"
+import {
+  CALENDAR_ACCESS_COOKIE,
+  calendarAccessCookieOptions,
+} from "@/lib/auth/calendar"
 import { getSession } from "@/lib/auth/session"
 import { meetCallsFromEvents } from "@/lib/meet-events"
 import { readStore } from "@/lib/persist-store"
@@ -14,10 +17,7 @@ const MAX_PAGES = 3
 function needsAuth() {
   const response = NextResponse.json({ needsAuth: true }, { status: 401 })
   response.cookies.set(CALENDAR_ACCESS_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
+    ...calendarAccessCookieOptions(),
     maxAge: 0,
   })
   return response
@@ -70,10 +70,7 @@ export async function GET(request: Request) {
           { status: 403 },
         )
         denied.cookies.set(CALENDAR_ACCESS_COOKIE, "", {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-          path: "/",
+          ...calendarAccessCookieOptions(),
           maxAge: 0,
         })
         return denied

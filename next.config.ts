@@ -45,7 +45,7 @@ function securityHeaders() {
       value: "camera=(), microphone=(), geolocation=(), payment=()",
     },
   ]
-  if (process.env.NODE_ENV === "production") {
+  if (/^https:\/\//i.test(process.env.NIMBUS_APP_URL?.trim() ?? "")) {
     headers.push({
       key: "Strict-Transport-Security",
       value: "max-age=31536000; includeSubDomains",

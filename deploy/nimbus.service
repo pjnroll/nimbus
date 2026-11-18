@@ -1,0 +1,18 @@
+# Servizio utente systemd per Nimbus.
+# Installazione: vedi la sezione "Avvio permanente" del README.
+
+[Unit]
+Description=Nimbus
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documenti/dev/nimbus
+# Next legge .env.local dalla WorkingDirectory.
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

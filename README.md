@@ -2,7 +2,7 @@
 
 Scrivania personale per un Technical Cloud Project Manager. Serve a catturare le richieste che arrivano da email o chat, distinguere ciò che **esegui tu** da ciò che **coordini**, e tenere i progetti con il link alla cartella Drive — senza un foglio che dopo due settimane diventa illeggibile.
 
-Ogni persona entra con **Google**. Il primo accesso crea la scrivania; gli account sono isolati. I dati stanno in JSON sul server. La sessione dura 24 ore. Non c’è sync con Gmail o Google Drive: gli URL Drive si incollano a mano.
+Gira in locale, senza servizi cloud: si entra con **email e password**, i dati stanno in JSON sul disco della macchina, la sessione dura 24 ore. Il login Google e l’import da Google Calendar restano disponibili come opzione. Non c’è sync con Gmail o Google Drive: gli URL Drive si incollano a mano.
 
 ## Cosa fa
 
@@ -14,116 +14,124 @@ Ogni persona entra con **Google**. Il primo accesso crea la scrivania; gli accou
 
 ## Avvio in locale
 
-Node.js 20 o successivo. Serve un client OAuth Google (tipo **Applicazione Web**) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+Node.js 20 o successivo.
 
-- Origini JavaScript autorizzate: `http://127.0.0.1:43123`
-- URI di reindirizzamento autorizzati: `http://127.0.0.1:43123/api/auth/google/callback` e `http://127.0.0.1:43123/api/calendar/google/callback`
-
-Per **Importa call** sull’agenda abilita la Google Calendar API sullo stesso progetto e aggiungi lo scope `https://www.googleapis.com/auth/calendar.events.readonly` alla schermata di consenso. Il login resta solo identità; il Calendario si autorizza a parte, in sola lettura.
-
-Finché l’app OAuth non è verificata, Google la limita ai tester che aggiungi alla schermata di consenso.
+1. Crea `.env.local` nella cartella del progetto (è fuori da git):
 
 ```bash
-export GOOGLE_CLIENT_ID=....apps.googleusercontent.com
-export GOOGLE_CLIENT_SECRET=...
+NIMBUS_AUTH_SECRET=una-stringa-lunga-casuale
+```
+
+Per generarne uno: `openssl rand -hex 32`. Se lo cambi, le sessioni aperte scadono.
+
+2. Installa e imposta la password del tuo account:
+
+```bash
 npm install
-npm run dev
+npm run set-password
 ```
 
-Apri [http://127.0.0.1:43123](http://127.0.0.1:43123) e usa **Continua con Google**. Il primo account, se esiste già `data/nimbus.json`, ne eredita i dati. Gli account successivi partono dai dati di esempio. Un account locale precedente con la stessa email Google viene collegato al primo accesso.
+Lo script elenca gli account presenti in `data/users.json`, chiede l’email e due volte la password (almeno 8 caratteri). Se l’email non esiste, crea l’account. Si può rilanciare in qualsiasi momento per cambiare password, anche a server avviato.
 
-Google accetta HTTP **solo** su `127.0.0.1` / `localhost`. Un IP di rete o Tailscale (`http://100.x.x.x:43123`) viene rifiutato (`invalid_request`).
-
-### Dominio proprio (es. nimbus.piergionni.it)
-
-Un record A verso l’IP Tailscale (`100.x`) **non** basta: il browser usa la porta 80/443, Nimbus ascolta `43123`, `100.x` è raggiungibile solo da nodi Tailscale, e Google pretenderà **HTTPS** (Let’s Encrypt su un IP Tailscale non funziona con la verifica HTTP).
-
-La via semplice è un **tunnel Cloudflare** sulla macchina dove gira Nimbus. Il CNAME verso il tunnel lo crea Cloudflare **dopo** che `piergionni.it` usa i nameserver Cloudflare. Non serve (e di solito non basta) un CNAME dal registrar verso `100.x` o verso `*.cfargotunnel.com`.
-
-**Nameserver, non glue.** Cloudflare ti dà due *nomi* tipo `ada.ns.cloudflare.com` e `bob.ns.cloudflare.com`. Nel registrar cerca la schermata **«nameserver del dominio» / «DNS di terze parti» / «custom nameserver»** e metti solo quei due host. Non è la schermata «crea nameserver» / «host» / «glue», quella chiede anche gli IP perché sta registrando `ns1.piergionni.it` — è un’altra cosa. Se il campo IP è obbligatorio, sei nel form sbagliato.
-
-Prima di cambiare i NS, copia su Cloudflare i record che hai già (MX della posta, `www`, ecc.): da quel momento il DNS autoritativo è Cloudflare.
-
-Poi, sulla macchina di Nimbus:
-
-1. Togli il record A `nimbus` → `100.x`.
-2. Installa `cloudflared`, poi:
+3. Compila e avvia:
 
 ```bash
-cloudflared tunnel login
-cloudflared tunnel create nimbus
-cloudflared tunnel route dns nimbus nimbus.piergionni.it
+npm run build
+npm start
 ```
 
-3. File `~/.cloudflared/config.yml` (adatta `tunnel` e `credentials-file` a quelli creati al passo 2):
+Nimbus ascolta su tutte le interfacce, porta `43123`:
 
-```yaml
-tunnel: <id-del-tunnel>
-credentials-file: /home/TUO_UTENTE/.cloudflared/<id-del-tunnel>.json
-ingress:
-  - hostname: nimbus.piergionni.it
-    service: http://127.0.0.1:43123
-  - service: http_status:404
-```
+- da questa macchina: [http://127.0.0.1:43123](http://127.0.0.1:43123)
+- dalla rete di casa: `http://<IP-della-macchina>:43123` (lo vedi con `ip -4 addr`)
+- da fuori casa, via Tailscale: `http://100.x.x.x:43123` (il traffico è già cifrato dalla VPN)
 
-4. `cloudflared tunnel run nimbus` (Nimbus deve già essere in ascolto su `127.0.0.1:43123`).
-5. Nel client OAuth Google, origini e redirect:
+Dopo 5 password sbagliate in 15 minuti lo stesso indirizzo viene bloccato per un quarto d’ora.
 
-   - `https://nimbus.piergionni.it`
-   - `https://nimbus.piergionni.it/api/auth/google/callback`
+Per lo sviluppo c’è `npm run dev`, sulla stessa porta.
 
-6. Avvia Nimbus **con** (prima di `npm run dev` / `npm start`):
+### Avvio permanente (systemd)
+
+Il servizio di esempio è in `deploy/nimbus.service` e presuppone il progetto in `~/Documenti/dev/nimbus` (adatta `WorkingDirectory` se serve).
 
 ```bash
-export NIMBUS_APP_URL=https://nimbus.piergionni.it
-export GOOGLE_CLIENT_ID=...
-export GOOGLE_CLIENT_SECRET=...
+mkdir -p ~/.config/systemd/user
+cp deploy/nimbus.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now nimbus
+loginctl enable-linger "$USER"   # parte all'accensione, anche senza login grafico
 ```
 
-Apri `https://nimbus.piergionni.it` (senza porta). Funziona da qualsiasi rete, non solo Tailscale.
+Log: `journalctl --user -u nimbus -f`. Dopo un aggiornamento del codice: `npm run build && systemctl --user restart nimbus`.
 
-In sviluppo, se non imposti `NIMBUS_AUTH_SECRET`, viene usato un secret di default. In produzione il secret è obbligatorio, insieme a `NIMBUS_APP_URL`.
+### Firewall
+
+Se usi `ufw`, apri la porta solo verso LAN e Tailscale (adatta la sottorete di casa):
+
+```bash
+sudo ufw allow from 192.168.1.0/24 to any port 43123 proto tcp
+sudo ufw allow in on tailscale0 to any port 43123 proto tcp
+```
 
 ## Persistenza e autenticazione
 
-Directory di default: `data/` (fuori da git).
+Directory di default: `data/` (fuori da git). Si cambia con `NIMBUS_DATA_DIR`.
 
-- `data/users.json` — account (`id`, email, `googleSub`)
+- `data/users.json` — account (`id`, email, hash della password, eventuale `googleSub`)
 - `data/stores/<userId>.json` — scrivania di ciascun utente
 - `data/files/<userId>/<activityId>/` — binari degli allegati delle attività
 
-L’export JSON include solo i metadati degli allegati (nome, dimensione), non i file.
-
-Per un volume k3s / Cloud Run:
-
-```bash
-NIMBUS_DATA_DIR=/data
-NIMBUS_AUTH_SECRET=una-stringa-lunga-casuale
-NIMBUS_APP_URL=https://nimbus.example.com
-GOOGLE_CLIENT_ID=....apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=...
-```
-
-Nel client OAuth di produzione: origine `https://nimbus.example.com` e redirect `https://nimbus.example.com/api/auth/google/callback` e `https://nimbus.example.com/api/calendar/google/callback`.
+Le password sono salvate solo come hash `scrypt`. L’export JSON include solo i metadati degli allegati (nome, dimensione), non i file.
 
 `NIMBUS_DATA_PATH` è ancora letto: la cartella del file diventa `dataDir`.
 
-Per chiudere i nuovi account dopo il setup (chi è già in `users.json` continua ad accedere):
-
-```bash
-NIMBUS_ALLOW_REGISTER=false
-```
-
-(Il primo account si può comunque creare se non esiste nessuno.)
+In sviluppo, se non imposti `NIMBUS_AUTH_SECRET`, viene usato un secret casuale e le sessioni scadono al riavvio. Con `npm start` il secret è obbligatorio.
 
 ## Backup
 
 Dal menu a tre puntini nella barra laterale (solo i dati dell’utente collegato):
 
-1. **Esporta JSON** — copia da tenere in Drive o in locale.
+1. **Esporta JSON** — copia da tenere dove preferisci.
 2. **Importa JSON** — ripristina un backup sulla tua scrivania.
 3. **Ripristina esempio** — torna ai dati dimostrativi.
 
+Per un backup completo, allegati compresi, copia l’intera cartella `data/`.
+
+## Opzionale: Google
+
+Senza `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` il bottone «Continua con Google» e «Importa call» non compaiono. Per riattivarli serve un client OAuth Google (tipo **Applicazione Web**) in [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+
+- Origini JavaScript autorizzate: `http://127.0.0.1:43123`
+- URI di reindirizzamento autorizzati: `http://127.0.0.1:43123/api/auth/google/callback` e `http://127.0.0.1:43123/api/calendar/google/callback`
+
+Per **Importa call** abilita la Google Calendar API sullo stesso progetto e aggiungi lo scope `https://www.googleapis.com/auth/calendar.events.readonly` alla schermata di consenso. Il Calendario si autorizza a parte, in sola lettura.
+
+In `.env.local`:
+
+```bash
+GOOGLE_CLIENT_ID=....apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=...
+NIMBUS_APP_URL=http://127.0.0.1:43123
+```
+
+Google accetta HTTP **solo** su `127.0.0.1` / `localhost`: da un IP di rete o Tailscale il login Google e l’import vengono rifiutati (`invalid_request`). Il login con password funziona ovunque.
+
+Finché l’app OAuth non è verificata, Google la limita ai tester che aggiungi alla schermata di consenso. Al primo accesso Google, un account con la stessa email viene collegato; per chiudere la creazione di nuovi account via Google:
+
+```bash
+NIMBUS_ALLOW_REGISTER=false
+```
+
+## Opzionale: HTTPS e dominio pubblico
+
+Se un giorno servisse di nuovo un dominio HTTPS (tunnel, reverse proxy, k3s), imposta `NIMBUS_APP_URL=https://...`: con un URL `https` i cookie diventano `Secure` e il server invia l’header HSTS. Con un URL `http` o senza `NIMBUS_APP_URL` restano compatibili con l’accesso in chiaro su LAN e Tailscale.
+
+### Dismettere il vecchio tunnel Cloudflare
+
+1. Ferma `cloudflared` (`Ctrl+C` sul processo, o `sudo systemctl disable --now cloudflared` se l’avevi installato come servizio).
+2. Facoltativo: `cloudflared tunnel delete nimbus`, poi togli il record `nimbus` dal DNS su Cloudflare e cancella `~/.cloudflared/`.
+3. Facoltativo: in Google Cloud Console revoca il client OAuth, se non usi l’import da Calendar.
+
 ## Stack
 
-Next.js, TypeScript, Tailwind CSS, shadcn/ui. Nessun database: JSON su disco, OAuth Google e cookie di sessione firmati.
+Next.js, TypeScript, Tailwind CSS, shadcn/ui. Nessun database: JSON su disco, password con hash `scrypt`, OAuth Google opzionale e cookie di sessione firmati. Il font Plus Jakarta Sans è incluso nel pacchetto, quindi build e avvio non richiedono internet.

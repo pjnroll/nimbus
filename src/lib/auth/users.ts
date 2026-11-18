@@ -1,3 +1,4 @@
+import { verifyPassword } from "@/lib/auth/password"
 import type { SessionUser } from "@/lib/auth/token"
 import { isNotFound, usersFilePath } from "@/lib/data-dir"
 import { nowISO } from "@/lib/dates"
@@ -10,6 +11,7 @@ export type UserRecord = {
   id: string
   email: string
   googleSub: string | null
+  passwordHash: string | null
   createdAt: string
 }
 
@@ -41,6 +43,10 @@ function coerceUser(value: unknown): UserRecord | null {
     googleSub:
       typeof candidate.googleSub === "string" && candidate.googleSub
         ? candidate.googleSub
+        : null,
+    passwordHash:
+      typeof candidate.passwordHash === "string" && candidate.passwordHash
+        ? candidate.passwordHash
         : null,
     createdAt: candidate.createdAt,
   }
@@ -130,10 +136,26 @@ export function upsertGoogleUser(profile: GoogleProfile): Promise<SessionUser> {
       id: crypto.randomUUID(),
       email: normalized,
       googleSub: sub,
+      passwordHash: null,
       createdAt: nowISO(),
     }
     await writeUsers([...file.users, user])
     await provisionUserStore(user.id, file.users.length === 0)
     return toPublic(user)
   })
+}
+
+// Unknown emails are checked against this hash too, so timing does not reveal them.
+const DUMMY_HASH = `scrypt$${"0".repeat(32)}$${"0".repeat(128)}`
+
+export async function verifyPasswordLogin(
+  email: string,
+  password: string,
+): Promise<SessionUser | null> {
+  const normalized = normalizeEmail(email)
+  const file = await listUsers()
+  const user = file.users.find((candidate) => candidate.email === normalized)
+  const ok = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH)
+  if (!ok || !user?.passwordHash) return null
+  return toPublic(user)
 }

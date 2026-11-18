@@ -3,7 +3,7 @@ import { OAuth2Client } from "google-auth-library"
 import { SignJWT, jwtVerify } from "jose"
 import { safeNextPath } from "@/lib/auth/next-path"
 import { googleOAuthOriginError } from "@/lib/auth/oauth-origin"
-import { authSecretKey } from "@/lib/auth/token"
+import { authSecretKey, secureCookies } from "@/lib/auth/token"
 
 export const OAUTH_STATE_COOKIE = "nimbus_oauth_state"
 export const OAUTH_STATE_MAX_AGE = 60 * 10
@@ -60,7 +60,7 @@ export function oauthStateCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies(),
     path: "/",
     maxAge: OAUTH_STATE_MAX_AGE,
   }
