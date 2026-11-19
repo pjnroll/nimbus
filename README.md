@@ -14,7 +14,7 @@ Gira in locale, senza servizi cloud: si entra con **email e password**, i dati s
 
 ## Avvio in locale
 
-Node.js 20 o successivo.
+Node.js 22 o successivo (`npm run set-password` usa `node --env-file-if-exists`).
 
 1. Crea `.env.local` nella cartella del progetto (è fuori da git):
 
@@ -72,6 +72,59 @@ Se usi `ufw`, apri la porta solo verso LAN e Tailscale (adatta la sottorete di c
 sudo ufw allow from 192.168.1.0/24 to any port 43123 proto tcp
 sudo ufw allow in on tailscale0 to any port 43123 proto tcp
 ```
+
+## Installare su un altro server
+
+Il codice arriva da git; `data/` e `.env.local` no, vanno portati o ricreati a mano. Gli esempi usano `~/nimbus` sul server.
+
+1. **Prerequisiti sul server**: Node.js 22 o successivo installato da pacchetto (per esempio NodeSource), così `npm` sta in `/usr/bin/npm` come si aspetta il servizio; `git` con accesso al repository; Tailscale se lo vuoi raggiungere da fuori casa.
+
+2. **Codice**:
+
+```bash
+git clone git@github.com:pjnroll/nimbus.git ~/nimbus
+cd ~/nimbus
+npm ci
+```
+
+3. **Dati**, dalla macchina dove gira oggi Nimbus (fermalo prima, se è attivo):
+
+```bash
+rsync -a ~/Documenti/dev/nimbus/data/ UTENTE@SERVER:~/nimbus/data/
+```
+
+`-a` conserva i permessi privati dei file. Da qui in poi la copia valida è quella sul server: non usare più Nimbus sulla macchina di partenza, altrimenti le due copie divergono.
+
+4. **Segreto e password**, sul server e dopo aver copiato `data/`:
+
+```bash
+cd ~/nimbus
+echo "NIMBUS_AUTH_SECRET=$(openssl rand -hex 32)" > .env.local
+chmod 600 .env.local
+npm run set-password
+```
+
+5. **Build e prova**: `npm run build && npm start`, poi apri `http://IP-DEL-SERVER:43123` (o `http://100.x.x.x:43123` via Tailscale) da un altro dispositivo e chiudi con `Ctrl+C`.
+
+6. **Servizio permanente**, con `WorkingDirectory` adattata al percorso del server:
+
+```bash
+mkdir -p ~/.config/systemd/user
+sed 's#%h/Documenti/dev/nimbus#%h/nimbus#' deploy/nimbus.service > ~/.config/systemd/user/nimbus.service
+systemctl --user daemon-reload
+systemctl --user enable --now nimbus
+sudo loginctl enable-linger "$USER"
+```
+
+7. **Firewall**: come nella sezione [Firewall](#firewall).
+
+8. **Aggiornamenti**:
+
+```bash
+cd ~/nimbus && git pull && npm ci && npm run build && systemctl --user restart nimbus
+```
+
+Sul server `data/` è l’unica copia: fai un backup periodico, per esempio con `rsync -a UTENTE@SERVER:~/nimbus/data/ ~/backup/nimbus-data/` da un’altra macchina.
 
 ## Persistenza e autenticazione
 
